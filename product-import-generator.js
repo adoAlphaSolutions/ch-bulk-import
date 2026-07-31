@@ -144,6 +144,30 @@ function downloadBlob(blob, name) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+// Tile match key: concatenated Item # (E1) + Color, case-insensitive.
+function matchKey(e1, color) {
+  return (String(e1 == null ? '' : e1).trim() + '|' + String(color == null ? '' : color).trim()).toLowerCase();
+}
+
+// Index a Content Hub export (headers = CH field names) by match key -> {id, identifier}.
+function buildExportIndex(aoa) {
+  if (!aoa || aoa.length < 2) return { error: 'Content Hub export has no data rows.' };
+  const headers = aoa[0].map(h => String(h == null ? '' : h).trim().toLowerCase());
+  const col = name => headers.indexOf(name);
+  const idCol = col('id'), identCol = col('identifier'), e1Col = col('tb.pcm.e1itemnumber'), colorCol = col('color');
+  if (e1Col < 0 || colorCol < 0) return { error: 'Export must include TB.PCM.E1ItemNumber and Color columns.' };
+  if (idCol < 0 && identCol < 0) return { error: 'Export must include an id or identifier column.' };
+  const idx = new Map();
+  for (let i = 1; i < aoa.length; i++) {
+    const row = aoa[i];
+    const e1 = row[e1Col], color = row[colorCol];
+    if (!String(e1 == null ? '' : e1).trim() && !String(color == null ? '' : color).trim()) continue;
+    const key = matchKey(e1, color);
+    if (!idx.has(key)) idx.set(key, { id: idCol >= 0 ? row[idCol] : '', identifier: identCol >= 0 ? row[identCol] : '' });
+  }
+  return { idx };
+}
+
 function buildRecord(rowObj) {
   const rec = {};
   for (const [lbl, chf] of Object.entries(ID_LABELS)) {
@@ -176,21 +200,27 @@ export default function createExternalRoot(rootElement) {
           The tool builds the Item Number + Area of Application, resolves option-list values to
           identifiers, and downloads a ready-to-import <b>${SHEET_NAME}</b> workbook. Add
           <code>id</code> and <code>identifier</code> columns for updates; leave them out for new records.</div>
-        <div class="g-drop" id="g-drop">📎 Drop your intake .xlsx / .csv here, or click to browse</div>
+        <div class="g-drop" id="g-drop">📎 <b>1. Intake file</b> — drop your vendor .xlsx / .csv here, or click to browse</div>
         <input type="file" id="g-file" accept=".xlsx,.xls,.csv" style="display:none" />
+        <div class="g-drop" id="g-drop2">🔁 <b>2. Content Hub export</b> (optional — only for UPDATES) — drop the export with id/identifier</div>
+        <input type="file" id="g-file2" accept=".xlsx,.xls,.csv" style="display:none" />
         <div class="g-row">
           <button class="g-btn g-dry" id="g-dry" disabled>🔍 Validate (dry run)</button>
           <button class="g-btn g-go"  id="g-go"  disabled>⬇ Generate import file</button>
           <span id="g-status" style="font-size:13px;color:#555"></span>
+        </div>
+        <div style="font-size:12px;color:#888;margin-bottom:6px">
+          No export = create new records. With export = update: intake rows are matched by Item # + Color to pull id/identifier.
         </div>
         <div class="g-log" id="g-log"></div>
       `;
       rootElement.innerHTML = ''; rootElement.appendChild(style); rootElement.appendChild(wrap);
 
       const drop = wrap.querySelector('#g-drop'), input = wrap.querySelector('#g-file');
+      const drop2 = wrap.querySelector('#g-drop2'), input2 = wrap.querySelector('#g-file2');
       const dryBtn = wrap.querySelector('#g-dry'), goBtn = wrap.querySelector('#g-go');
       const status = wrap.querySelector('#g-status'), logEl = wrap.querySelector('#g-log');
-      let currentFile = null;
+      let currentFile = null, currentExport = null;
 
       function log(msg, cls) {
         logEl.style.display = 'block';
@@ -199,17 +229,27 @@ export default function createExternalRoot(rootElement) {
       }
       function clearLog() { logEl.innerHTML = ''; logEl.style.display = 'none'; }
 
-      function onFile(file) {
-        if (!file) return;
-        clearLog(); currentFile = file;
-        status.textContent = `${file.name} — ready`;
-        dryBtn.disabled = false; goBtn.disabled = false;
+      function refreshStatus() {
+        const parts = [];
+        if (currentFile) parts.push(`intake: ${currentFile.name}`);
+        if (currentExport) parts.push(`export: ${currentExport.name} (UPDATE)`);
+        status.textContent = parts.join('  ·  ');
+        dryBtn.disabled = !currentFile; goBtn.disabled = !currentFile;
       }
+      function onFile(file) { if (!file) return; clearLog(); currentFile = file; refreshStatus(); }
+      function onExport(file) { if (!file) return; clearLog(); currentExport = file; refreshStatus(); }
+
       drop.addEventListener('click', () => input.click());
       input.addEventListener('change', e => onFile(e.target.files[0]));
       drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('g-hover'); });
       drop.addEventListener('dragleave', () => drop.classList.remove('g-hover'));
       drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('g-hover'); onFile(e.dataTransfer.files[0]); });
+
+      drop2.addEventListener('click', () => input2.click());
+      input2.addEventListener('change', e => onExport(e.target.files[0]));
+      drop2.addEventListener('dragover', e => { e.preventDefault(); drop2.classList.add('g-hover'); });
+      drop2.addEventListener('dragleave', () => drop2.classList.remove('g-hover'));
+      drop2.addEventListener('drop', e => { e.preventDefault(); drop2.classList.remove('g-hover'); onExport(e.dataTransfer.files[0]); });
 
       async function run(dryRun) {
         clearLog(); dryBtn.disabled = true; goBtn.disabled = true;
@@ -240,8 +280,33 @@ export default function createExternalRoot(rootElement) {
           log(`Data rows: ${records.length}. Recognized columns: ${rawHeaders.filter((h, i) => known.has(normHeaders[i])).length}.`, 'g-info');
           if (skipped.length) log(`Skipped (reference-only): ${skipped.join(', ')}`, 'g-skip');
 
+          // UPDATE mode: match intake rows to a Content Hub export by (E1 Item # + Color).
+          const updateMode = !!currentExport;
+          let outputRecords = records;
+          if (updateMode) {
+            const expAoa = await parseFileAOA(currentExport, XLSX);
+            const { idx, error } = buildExportIndex(expAoa);
+            if (error) { log(`✗ Content Hub export: ${error}`, 'g-err'); return; }
+            log(`UPDATE mode — Content Hub export: ${idx.size} record(s) indexed by (Item # + Color).`, 'g-info');
+            let matched = 0; const unmatchedRows = [];
+            for (const r of records) {
+              const m = idx.get(matchKey(r['TB.PCM.E1ItemNumber'], r['Color']));
+              if (m) {
+                if (m.id != null && String(m.id).trim()) r['id'] = m.id;
+                if (m.identifier != null && String(m.identifier).trim()) r['identifier'] = m.identifier;
+                r.__matched = true; matched++;
+              } else {
+                r.__matched = false; unmatchedRows.push(r.__row);
+              }
+            }
+            log(`Matched ${matched} of ${records.length} intake row(s) to existing records.`, matched ? 'g-ok' : 'g-err');
+            if (unmatchedRows.length) log(`Unmatched (no existing record — skipped): row ${unmatchedRows.join(', ')}`, 'g-err');
+            outputRecords = records.filter(r => r.__matched);
+            if (outputRecords.length === 0) { log('Nothing to update — no intake rows matched the export.', 'g-err'); return; }
+          }
+
           const used = new Set();
-          records.forEach(r => Object.keys(r).forEach(k => { if (k !== '__row') used.add(k); }));
+          outputRecords.forEach(r => Object.keys(r).forEach(k => { if (k !== '__row' && k !== '__matched') used.add(k); }));
 
           // Build option-list maps from the embedded snapshot.
           const meta = {};
@@ -259,9 +324,9 @@ export default function createExternalRoot(rootElement) {
           }
 
           const unresolved = [];
-          for (const r of records) {
+          for (const r of outputRecords) {
             for (const f of Object.keys(r)) {
-              if (f === '__row') continue;
+              if (f === '__row' || f === '__matched') continue;
               if (meta[f] && meta[f].isOption) r[f] = resolveValue(r[f], meta[f].map, f, r.__row, unresolved);
             }
           }
@@ -278,7 +343,7 @@ export default function createExternalRoot(rootElement) {
 
           const outCols = OUT_COLS.filter(f => used.has(f));
           const outRows = [outCols];
-          for (const r of records) outRows.push(outCols.map(f => (r[f] == null ? '' : r[f])));
+          for (const r of outputRecords) outRows.push(outCols.map(f => (r[f] == null ? '' : r[f])));
 
           const ws = XLSX.utils.aoa_to_sheet(outRows);
           const wb = XLSX.utils.book_new();
@@ -286,7 +351,7 @@ export default function createExternalRoot(rootElement) {
           const arr = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
           const fname = `ContentHub_TilesImport_${ts()}.xlsx`;
           downloadBlob(new Blob([arr], { type: 'application/octet-stream' }), fname);
-          log(`✓ Generated ${fname} — ${records.length} row(s), sheet "${SHEET_NAME}".`, 'g-ok');
+          log(`✓ Generated ${fname} — ${outputRecords.length} ${updateMode ? 'update' : 'new'} row(s), sheet "${SHEET_NAME}".`, 'g-ok');
           if (unresolved.length) log(`⚠ ${unresolved.length} unmatched value(s) were left blank (listed above).`, 'g-err');
         } catch (e) {
           log(`✗ ${e && e.message ? e.message : e}`, 'g-err');
