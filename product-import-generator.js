@@ -115,7 +115,7 @@ function buildLabelMap(pairs) {
   return m;
 }
 
-function resolveValue(value, map, field, unresolved) {
+function resolveValue(value, map, field, rowNum, unresolved) {
   const raw = String(value == null ? '' : value).trim();
   if (!raw) return '';
   const tokens = raw.split(/[|,]/).map(t => t.trim()).filter(Boolean);
@@ -124,9 +124,9 @@ function resolveValue(value, map, field, unresolved) {
     let id = map.get(tok.toLowerCase());
     if (!id && tok.indexOf('.') >= 0) id = tok; // already an identifier
     if (id) ids.push(id);
-    else { ids.push('[' + tok + ']'); unresolved.push({ field, value: tok }); }
+    else unresolved.push({ row: rowNum, field, value: tok }); // omit -> leave blank
   }
-  return ids.join('|');
+  return ids.join('|'); // blank if nothing resolved
 }
 
 async function parseFileAOA(file, XLSX) {
@@ -221,21 +221,27 @@ export default function createExternalRoot(rootElement) {
 
           const rawHeaders = aoa[0].map(h => String(h == null ? '' : h).trim());
           const normHeaders = rawHeaders.map(norm);
-          const dataRows = aoa.slice(1).filter(r => r.some(c => String(c == null ? '' : c).trim() !== ''));
 
           const known = new Set([...Object.keys(FIELD_MAP), ...Object.keys(ID_LABELS), ...ITEM_COLS.map(i => i.label)]);
           const skipped = rawHeaders.filter((h, i) => h && !known.has(normHeaders[i]));
-          log(`Data rows: ${dataRows.length}. Recognized columns: ${rawHeaders.filter((h, i) => known.has(normHeaders[i])).length}.`, 'g-info');
+
+          // Build records, keeping the spreadsheet row number (header = row 1).
+          const records = [];
+          for (let i = 1; i < aoa.length; i++) {
+            const row = aoa[i];
+            if (!row.some(c => String(c == null ? '' : c).trim() !== '')) continue;
+            const obj = {};
+            for (let j = 0; j < normHeaders.length; j++) if (normHeaders[j]) obj[normHeaders[j]] = row[j];
+            const rec = buildRecord(obj);
+            rec.__row = i + 1;
+            records.push(rec);
+          }
+
+          log(`Data rows: ${records.length}. Recognized columns: ${rawHeaders.filter((h, i) => known.has(normHeaders[i])).length}.`, 'g-info');
           if (skipped.length) log(`Skipped (reference-only): ${skipped.join(', ')}`, 'g-skip');
 
-          const records = dataRows.map(row => {
-            const obj = {};
-            for (let i = 0; i < normHeaders.length; i++) if (normHeaders[i]) obj[normHeaders[i]] = row[i];
-            return buildRecord(obj);
-          });
-
           const used = new Set();
-          records.forEach(r => Object.keys(r).forEach(k => used.add(k)));
+          records.forEach(r => Object.keys(r).forEach(k => { if (k !== '__row') used.add(k); }));
 
           // Build option-list maps from the embedded snapshot.
           const meta = {};
@@ -255,15 +261,20 @@ export default function createExternalRoot(rootElement) {
           const unresolved = [];
           for (const r of records) {
             for (const f of Object.keys(r)) {
-              if (meta[f] && meta[f].isOption) r[f] = resolveValue(r[f], meta[f].map, f, unresolved);
+              if (f === '__row') continue;
+              if (meta[f] && meta[f].isOption) r[f] = resolveValue(r[f], meta[f].map, f, r.__row, unresolved);
             }
           }
 
-          log(`Unresolved values: ${unresolved.length}`, unresolved.length ? 'g-err' : 'g-ok');
-          unresolved.slice(0, 50).forEach(u => log(`  ✗ ${u.field}: "${u.value}" not found in option list`, 'g-err'));
-          if (unresolved.length > 50) log(`  … and ${unresolved.length - 50} more`, 'g-err');
+          if (unresolved.length === 0) {
+            log('All option-list values matched. ✓', 'g-ok');
+          } else {
+            log(`⚠ ${unresolved.length} value(s) not found — these cells will be left BLANK in the output:`, 'g-err');
+            unresolved.slice(0, 100).forEach(u => log(`   Row ${u.row} · ${u.field}: "${u.value}"`, 'g-err'));
+            if (unresolved.length > 100) log(`   … and ${unresolved.length - 100} more`, 'g-err');
+          }
 
-          if (dryRun) { log('Dry run complete — fix any unresolved values, then Generate.', 'g-info'); return; }
+          if (dryRun) { log('Dry run complete — fix the values above (or leave them blank), then Generate.', 'g-info'); return; }
 
           const outCols = OUT_COLS.filter(f => used.has(f));
           const outRows = [outCols];
@@ -276,7 +287,7 @@ export default function createExternalRoot(rootElement) {
           const fname = `ContentHub_TilesImport_${ts()}.xlsx`;
           downloadBlob(new Blob([arr], { type: 'application/octet-stream' }), fname);
           log(`✓ Generated ${fname} — ${records.length} row(s), sheet "${SHEET_NAME}".`, 'g-ok');
-          if (unresolved.length) log('⚠ Some values were left bracketed [like this] — review before importing.', 'g-err');
+          if (unresolved.length) log(`⚠ ${unresolved.length} unmatched value(s) were left blank (listed above).`, 'g-err');
         } catch (e) {
           log(`✗ ${e && e.message ? e.message : e}`, 'g-err');
         } finally {
