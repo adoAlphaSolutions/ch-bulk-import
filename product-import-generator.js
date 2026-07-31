@@ -4,33 +4,34 @@
 // Browser replacement for the Tile macro's Intake -> "Export to Content Hub File".
 //
 // Input : the vendor INTAKE spreadsheet. Header row (row 1) uses the friendly
-//         Tile intake labels, e.g.:
-//           Backsplash Item # | Floor Item # | Shower Floor Item # | Wall Item # |
-//           Listello Item # | Manufacturer | Brand | Family/Style Name | Color |
-//           Color Family | Look/Style | Shape | Size | Material | Finish |
-//           Unit of Measure | Thickness (in) | Backsplash Tile | Floor Tile |
-//           Shower Floor | Wall Tile | Listello | Other Details | ... (reference)
+//         Tile intake labels (Backsplash Item #, Floor Item #, ..., Manufacturer,
+//         Brand, Family/Style Name, Color, Color Family, Look/Style, Shape, Size,
+//         Material, Finish, Unit of Measure, Thickness (in), ... reference cols).
 //         Optionally include "id" and "identifier" columns for updates.
 //
 // Transform (mirrors Toll_PCM_Tile_Macros.bas):
 //   * The 5 Item # cells concatenate (Floor,Wall,Backsplash,ShowerFloor,Listello)
 //     with commas into TB.PCM.E1ItemNumber.
-//   * Each filled Item # adds an AreaOfApplication identifier (pipe-joined):
-//       Floor->FloorTile Wall->WallTile Backsplash->TileBacksplash
-//       ShowerFloor->ShowerFloor Listello->Listello
-//   * Friendly labels map to CH fields; option-list values are resolved to
-//     identifiers LIVE from Content Hub; reference columns are skipped.
+//   * Each filled Item # adds an AreaOfApplication identifier (pipe-joined).
+//   * Friendly labels map to CH fields; option-list DISPLAY values are resolved
+//     to identifiers using the embedded option-list snapshot (LOOKUPS), which was
+//     generated from the same Content Hub package data sources the macro's
+//     "Lookups" sheet uses. Reference columns are skipped.
 //   * id / identifier pass through when present (updates); blank => new records.
 //
 // Output: a downloadable workbook with ONE sheet named "M.PCM.Product".
-// This tool only READS taxonomies and WRITES a local file.
+//
+// NOTE: LOOKUPS is a snapshot. If the option lists change in Content Hub,
+// regenerate it from the package datasources and update this file.
 // ============================================================================
 
 const SHEETJS_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
-const CH_HOST = window.location.origin;
 const SHEET_NAME = 'M.PCM.Product';
 
-// Field -> backing taxonomy (mirrors GetLookupSourceForCHField).
+// Option-list snapshot: source -> [[identifier, displayLabel], ...]
+const LOOKUPS = {"TB.PCM.Manufacturer":[["TB.PCM.Manufacturer.Amerock","Amerock"],["TB.PCM.Manufacturer.Anderson","Anderson"],["TB.PCM.Manufacturer.ArizonaTile","Arizona Tile"],["TB.PCM.Manufacturer.BerensonHardware","Berenson Hardware"],["TB.PCM.Manufacturer.CaliforniaMantelFireplace","California Mantel & Fireplace"],["TB.PCM.Manufacturer.Consentino","Consentino"],["TB.PCM.Manufacturer.Cove","Cove"],["TB.PCM.Manufacturer.DalTile","DalTile"],["TB.PCM.Manufacturer.ElectricMirror","Electric Mirror"],["TB.PCM.Manufacturer.Emser","Emser"],["TB.PCM.Manufacturer.Emtek","Emtek"],["TB.PCM.Manufacturer.HomeSiteServices","Home Site Services"],["TB.PCM.Manufacturer.HunterDouglas","Hunter Douglas"],["TB.PCM.Manufacturer.Infratech","Infratech"],["TB.PCM.Manufacturer.JamisonCollections","Jamison Collections"],["TB.PCM.Manufacturer.JennAir","JennAir"],["TB.PCM.Manufacturer.KitchenAid","KitchenAid"],["TB.PCM.Manufacturer.Kohler","Kohler"],["TB.PCM.Manufacturer.Kwikset","Kwikset"],["TB.PCM.Manufacturer.Marazzi","Marazzi"],["TB.PCM.Manufacturer.Metropolitan","Metropolitan"],["TB.PCM.Manufacturer.Mohawk","Mohawk"],["TB.PCM.Manufacturer.PrecisionCabinetry","Precision Cabinetry"],["TB.PCM.Manufacturer.ProgressLighting","Progress Lighting"],["TB.PCM.Manufacturer.Provenza","Provenza"],["TB.PCM.Manufacturer.Shaw","Shaw"],["TB.PCM.Manufacturer.SherwinWilliams","Sherwin Williams"],["TB.PCM.Manufacturer.Sterling","Sterling"],["TB.PCM.Manufacturer.SubZero","Sub-Zero"],["TB.PCM.Manufacturer.TopKnobs","Top Knobs"],["TB.PCM.Manufacturer.Tuftex","Tuftex"],["TB.PCM.Manufacturer.Unbranded","Unbranded"],["TB.PCM.Manufacturer.WesternWindowSystems","Western Window Systems"],["TB.PCM.Manufacturer.Whirlpool","Whirlpool"],["TB.PCM.Manufacturer.Wolf","Wolf"],["TB.PCM.Manufacturer.CenturyCabinetry","Century Cabinetry"],["TB.PCM.Manufacturer.AmericanOlean","American Olean"],["TB.PCM.Manufacturer.UrbanEffects","Urban Effects"],["TB.PCM.Manufacturer.Coyote","Coyote"],["TB.PCM.Manufacturer.MSI","MSI"],["TB.PCM.Manufacturer.ASKO","ASKO"],["TB.PCM.Manufacturer.Mullican","Mullican"],["TB.PCM.Manufacturer.Mannington","Mannington"]],"TB.PCM.Brand":[["TB.PCM.Brand.AmericanOlean","American Olean"],["TB.PCM.Brand.ArizonaTile","Arizona Tile"],["TB.PCM.Brand.Daltile","Daltile"],["TB.PCM.Brand.EmserTile","Emser Tile"],["TB.PCM.Brand.Marazzi","Marazzi"],["TB.PCM.Brand.Shaw","Shaw"]],"TB.PCM.TileColorFamily":[["TB.PCM.TileColorFamily.Beige","Beige"],["TB.PCM.TileColorFamily.Black","Black"],["TB.PCM.TileColorFamily.Blue","Blue"],["TB.PCM.TileColorFamily.Brown","Brown"],["TB.PCM.TileColorFamily.Cream","Cream"],["TB.PCM.TileColorFamily.Gray","Gray"],["TB.PCM.TileColorFamily.Green","Green"],["TB.PCM.TileColorFamily.Multicolor","Multicolor"],["TB.PCM.TileColorFamily.Orange","Orange"],["TB.PCM.TileColorFamily.Pink","Pink"],["TB.PCM.TileColorFamily.Red","Red"],["TB.PCM.TileColorFamily.Taupe","Taupe"],["TB.PCM.TileColorFamily.TerraCotta","Terra Cotta"],["TB.PCM.TileColorFamily.White","White"],["TB.PCM.TileColorFamily.Yellow","Yellow"]],"TB.PCM.TileStyle":[["TB.PCM.TileStyle.Brick","Brick"],["TB.PCM.TileStyle.ConcreteLook","Concrete Look"],["TB.PCM.TileStyle.Fabric","Fabric"],["TB.PCM.TileStyle.Handmade","Handmade"],["TB.PCM.TileStyle.MarbleLook","Marble Look"],["TB.PCM.TileStyle.Mosaics","Mosaics"],["TB.PCM.TileStyle.NaturalStone","Natural Stone"],["TB.PCM.TileStyle.Patterned","Patterned"],["TB.PCM.TileStyle.Solid","Solid"],["TB.PCM.TileStyle.StoneLook","Stone Look"],["TB.PCM.TileStyle.Textured","Textured"],["TB.PCM.TileStyle.WoodLook","Wood Look"]],"TB.PCM.TileSize":[["TB.PCM.TileSize.HerringboneChevron","Herringbone/Chevron"],["TB.PCM.TileSize.Hexagon","Hexagon"],["TB.PCM.TileSize.LargeFormat","Large Format"],["TB.PCM.TileSize.Pebble","Pebble"],["TB.PCM.TileSize.PennyOval","Penny/Oval"],["TB.PCM.TileSize.Plank","Plank"],["TB.PCM.TileSize.Rectangle","Rectangle"],["TB.PCM.TileSize.Square","Square"],["TB.PCM.TileSize.Subway","Subway"],["TB.PCM.TileSize.UniqueShapes","Unique Shapes"]],"TB.PCM.TileMaterial":[["TB.PCM.TileMaterial.Ceramic","Ceramic"],["TB.PCM.TileMaterial.Porcelain","Porcelain"],["TB.PCM.TileMaterial.Glass","Glass"],["TB.PCM.TileMaterial.NaturalStoneMarble","Natural Stone - Marble"],["TB.PCM.TileMaterial.NaturalStoneTravertine","Natural Stone - Travertine"],["TB.PCM.TileMaterial.NaturalStoneLimestone","Natural Stone - Limestone"],["TB.PCM.TileMaterial.NaturalStoneMixed","Natural Stone - Mixed"]],"TB.PCM.TileFinish":[["TB.PCM.TileFinish.3DSculptural","3D/Sculptural"],["TB.PCM.TileFinish.Glossy","Glossy"],["TB.PCM.TileFinish.Matte","Matte"],["TB.PCM.TileFinish.Satin","Satin"],["TB.PCM.TileFinish.SlipResistant","Slip Resistant"],["TB.PCM.TileFinish.Smooth","Smooth"],["TB.PCM.TileFinish.Textured","Textured"]],"TB.PCM.UnitOfMeasure":[["TB.PCM.UnitOfMeasure.SQF","SQF"],["TB.PCM.UnitOfMeasure.Each","Each"]]};
+
+// Field -> backing option-list source (mirrors GetLookupSourceForCHField).
 const FIELD_SOURCE = {
   'TB.PCM.Product.Manufacturer': 'TB.PCM.Manufacturer',
   'TB.PCM.Product.TileUnitOfMeasure': 'TB.PCM.UnitOfMeasure',
@@ -65,15 +66,13 @@ const ITEM_COLS = [
 
 const ID_LABELS = { 'id': 'id', 'content hub id': 'id', 'identifier': 'identifier', 'content hub identifier': 'identifier' };
 
-// Output column order for the M.PCM.Product sheet.
 const OUT_COLS = [
   'id', 'identifier', 'TB.PCM.E1ItemNumber', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand',
   'TB.PCM.FamilyName', 'Color', 'TB.PCM.TileColorFamily', 'TB.PCM.TileStyle', 'TB.PCM.TileSize',
   'TB.PCM.Size', 'TB.PCM.TileMaterial', 'TB.PCM.TileFinish', 'TB.PCM.Product.TileUnitOfMeasure',
   'TB.PCM.Product.TileThickness', 'TB.PCM.AreaOfApplication'
 ];
-// Never resolved as option-lists (plain text / already identifiers).
-const TEXT_FIELDS = new Set(['id', 'identifier', 'TB.PCM.E1ItemNumber', 'TB.PCM.FamilyName', 'Color', 'TB.PCM.Product.TileThickness']);
+const TEXT_FIELDS = new Set(['id', 'identifier', 'TB.PCM.E1ItemNumber', 'TB.PCM.FamilyName', 'Color', 'TB.PCM.Size', 'TB.PCM.Product.TileThickness', 'TB.PCM.AreaOfApplication']);
 
 const CSS = `
   .g-wrap  { font-family: "Segoe UI", sans-serif; padding: 24px; max-width: 860px; }
@@ -103,42 +102,15 @@ function loadXLSX() {
 
 function norm(s) { return String(s == null ? '' : s).trim().toLowerCase().replace(/\s+/g, ' '); }
 
-function readProp(item, name) {
-  const p = item && item.properties ? item.properties[name] : undefined;
-  if (p == null) return '';
-  if (typeof p === 'object') { const k = Object.keys(p); return k.length ? String(p[k[0]]) : ''; }
-  return String(p);
-}
-function readLabel(it) { return readProp(it, 'Label') || readProp(it, 'TaxonomyLabel') || readProp(it, 'Name') || ''; }
-
-async function queryDefinitionValues(defName) {
-  const chql = `Definition.Name=='${defName}'`;
-  const out = []; let skip = 0, safety = 0;
-  while (safety++ < 500) {
-    const url = `${CH_HOST}/api/entities/query?query=${encodeURIComponent(chql)}&skip=${skip}&take=200`;
-    const res = await fetch(url, { credentials: 'include', headers: { Accept: 'application/json' } });
-    if (!res.ok) { const b = await res.text().catch(() => ''); throw new Error(`HTTP ${res.status}${b ? ' — ' + b : ''}`); }
-    const data = await res.json();
-    const items = (data && data.items) || [];
-    if (items.length === 0) break;
-    for (const it of items) {
-      const identifier = it.identifier || (it.self && it.self.href ? it.self.href.split('/').pop() : null);
-      if (identifier) out.push({ identifier, label: readLabel(it) });
-    }
-    if (items.length < 200) break;
-    skip += 200;
-  }
-  return out;
-}
-
-function buildLabelMap(values) {
+// [[identifier,label],...] -> Map of label/segment/full-id (lowercased) -> identifier
+function buildLabelMap(pairs) {
   const m = new Map();
-  for (const v of values) {
-    if (!v.identifier) continue;
-    m.set(v.identifier.toLowerCase(), v.identifier);
-    const last = v.identifier.split('.').pop();
-    if (last) m.set(last.toLowerCase(), v.identifier);
-    if (v.label) m.set(String(v.label).trim().toLowerCase(), v.identifier);
+  for (const [identifier, label] of pairs) {
+    if (!identifier) continue;
+    m.set(identifier.toLowerCase(), identifier);
+    const last = identifier.split('.').pop();
+    if (last) m.set(last.toLowerCase(), identifier);
+    if (label) m.set(String(label).trim().toLowerCase(), identifier);
   }
   return m;
 }
@@ -150,7 +122,7 @@ function resolveValue(value, map, field, unresolved) {
   const ids = [];
   for (const tok of tokens) {
     let id = map.get(tok.toLowerCase());
-    if (!id && tok.indexOf('.') >= 0) id = tok;
+    if (!id && tok.indexOf('.') >= 0) id = tok; // already an identifier
     if (id) ids.push(id);
     else { ids.push('[' + tok + ']'); unresolved.push({ field, value: tok }); }
   }
@@ -172,7 +144,6 @@ function downloadBlob(blob, name) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-// Turn one intake row (normalized-label -> value) into a CH field record.
 function buildRecord(rowObj) {
   const rec = {};
   for (const [lbl, chf] of Object.entries(ID_LABELS)) {
@@ -203,9 +174,8 @@ export default function createExternalRoot(rootElement) {
         <div class="g-title">🏭 Product Import Generator — Tile</div>
         <div class="g-sub">Upload the vendor <b>intake</b> spreadsheet (friendly Tile headers).
           The tool builds the Item Number + Area of Application, resolves option-list values to
-          identifiers (live from Content Hub), and downloads a ready-to-import <b>${SHEET_NAME}</b>
-          workbook. Add <code>id</code> and <code>identifier</code> columns for updates; leave them out for new records.
-          Nothing is written to Content Hub.</div>
+          identifiers, and downloads a ready-to-import <b>${SHEET_NAME}</b> workbook. Add
+          <code>id</code> and <code>identifier</code> columns for updates; leave them out for new records.</div>
         <div class="g-drop" id="g-drop">📎 Drop your intake .xlsx / .csv here, or click to browse</div>
         <input type="file" id="g-file" accept=".xlsx,.xls,.csv" style="display:none" />
         <div class="g-row">
@@ -253,33 +223,33 @@ export default function createExternalRoot(rootElement) {
           const normHeaders = rawHeaders.map(norm);
           const dataRows = aoa.slice(1).filter(r => r.some(c => String(c == null ? '' : c).trim() !== ''));
 
-          // Report recognized vs skipped columns.
           const known = new Set([...Object.keys(FIELD_MAP), ...Object.keys(ID_LABELS), ...ITEM_COLS.map(i => i.label)]);
           const skipped = rawHeaders.filter((h, i) => h && !known.has(normHeaders[i]));
           log(`Data rows: ${dataRows.length}. Recognized columns: ${rawHeaders.filter((h, i) => known.has(normHeaders[i])).length}.`, 'g-info');
           if (skipped.length) log(`Skipped (reference-only): ${skipped.join(', ')}`, 'g-skip');
 
-          // Build records.
           const records = dataRows.map(row => {
             const obj = {};
             for (let i = 0; i < normHeaders.length; i++) if (normHeaders[i]) obj[normHeaders[i]] = row[i];
             return buildRecord(obj);
           });
 
-          // Which CH fields are actually used?
           const used = new Set();
           records.forEach(r => Object.keys(r).forEach(k => used.add(k)));
 
-          // Probe option-list fields (once each) and resolve.
+          // Build option-list maps from the embedded snapshot.
           const meta = {};
           for (const f of OUT_COLS) {
             if (!used.has(f) || TEXT_FIELDS.has(f)) { meta[f] = { isOption: false }; continue; }
             const src = sourceFor(f);
-            let values = [];
-            try { values = await queryDefinitionValues(src); }
-            catch (e) { log(`  (lookup failed for ${src}: ${e.message}) — ${f} treated as text`, 'g-skip'); }
-            meta[f] = { isOption: values.length > 0, map: buildLabelMap(values) };
-            if (meta[f].isOption) log(`  ${f} → ${src}: ${values.length} options`, 'g-info');
+            const pairs = LOOKUPS[src];
+            if (pairs && pairs.length) {
+              meta[f] = { isOption: true, map: buildLabelMap(pairs) };
+              log(`  ${f} → ${src}: ${pairs.length} options`, 'g-info');
+            } else {
+              meta[f] = { isOption: false };
+              log(`  ${f}: no option list found (${src}) — passed through as text`, 'g-skip');
+            }
           }
 
           const unresolved = [];
