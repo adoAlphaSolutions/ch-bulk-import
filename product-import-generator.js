@@ -163,7 +163,10 @@ function buildExportIndex(aoa) {
     const e1 = row[e1Col], color = row[colorCol];
     if (!String(e1 == null ? '' : e1).trim() && !String(color == null ? '' : color).trim()) continue;
     const key = matchKey(e1, color);
-    if (!idx.has(key)) idx.set(key, { id: idCol >= 0 ? row[idCol] : '', identifier: identCol >= 0 ? row[identCol] : '' });
+    if (!idx.has(key)) idx.set(key, {
+      id: idCol >= 0 ? row[idCol] : '', identifier: identCol >= 0 ? row[identCol] : '',
+      e1: String(e1 == null ? '' : e1).trim(), color: String(color == null ? '' : color).trim()
+    });
   }
   return { idx };
 }
@@ -288,19 +291,28 @@ export default function createExternalRoot(rootElement) {
             const { idx, error } = buildExportIndex(expAoa);
             if (error) { log(`✗ Content Hub export: ${error}`, 'g-err'); return; }
             log(`UPDATE mode — Content Hub export: ${idx.size} record(s) indexed by (Item # + Color).`, 'g-info');
-            let matched = 0; const unmatchedRows = [];
+            let matched = 0; const unmatched = [];
             for (const r of records) {
-              const m = idx.get(matchKey(r['TB.PCM.E1ItemNumber'], r['Color']));
+              const ik = matchKey(r['TB.PCM.E1ItemNumber'], r['Color']);
+              const m = idx.get(ik);
               if (m) {
                 if (m.id != null && String(m.id).trim()) r['id'] = m.id;
                 if (m.identifier != null && String(m.identifier).trim()) r['identifier'] = m.identifier;
                 r.__matched = true; matched++;
               } else {
-                r.__matched = false; unmatchedRows.push(r.__row);
+                r.__matched = false;
+                unmatched.push({ row: r.__row, e1: r['TB.PCM.E1ItemNumber'] || '', color: r['Color'] || '' });
               }
             }
             log(`Matched ${matched} of ${records.length} intake row(s) to existing records.`, matched ? 'g-ok' : 'g-err');
-            if (unmatchedRows.length) log(`Unmatched (no existing record — skipped): row ${unmatchedRows.join(', ')}`, 'g-err');
+            if (unmatched.length) {
+              log(`Unmatched (skipped) — intake values that found no export match:`, 'g-err');
+              unmatched.forEach(u => log(`   Row ${u.row}: Item#="${u.e1}"  Color="${u.color}"`, 'g-err'));
+              const sample = [...idx.values()].slice(0, 15);
+              log(`Content Hub export contains (Item# / Color) — compare against the above:`, 'g-skip');
+              sample.forEach(e => log(`   Item#="${e.e1}"  Color="${e.color}"`, 'g-skip'));
+              if (idx.size > sample.length) log(`   … and ${idx.size - sample.length} more`, 'g-skip');
+            }
             outputRecords = records.filter(r => r.__matched);
             if (outputRecords.length === 0) { log('Nothing to update — no intake rows matched the export.', 'g-err'); return; }
           }
