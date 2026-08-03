@@ -115,18 +115,19 @@ function buildLabelMap(pairs) {
   return m;
 }
 
-function resolveValue(value, map, field, rowNum, unresolved) {
+// Resolve display value(s) -> identifiers. Returns { value, bad } where `bad`
+// lists the tokens that could not be matched.
+function resolveField(value, map) {
   const raw = String(value == null ? '' : value).trim();
-  if (!raw) return '';
+  if (!raw) return { value: '', bad: [] };
   const tokens = raw.split(/[|,]/).map(t => t.trim()).filter(Boolean);
-  const ids = [];
+  const ids = [], bad = [];
   for (const tok of tokens) {
     let id = map.get(tok.toLowerCase());
     if (!id && tok.indexOf('.') >= 0) id = tok; // already an identifier
-    if (id) ids.push(id);
-    else unresolved.push({ row: rowNum, field, value: tok }); // omit -> leave blank
+    if (id) ids.push(id); else bad.push(tok);
   }
-  return ids.join('|'); // blank if nothing resolved
+  return { value: ids.join('|'), bad };
 }
 
 async function parseFileAOA(file, XLSX) {
@@ -163,9 +164,13 @@ function buildExportIndex(aoa) {
     const e1 = row[e1Col], color = row[colorCol];
     if (!String(e1 == null ? '' : e1).trim() && !String(color == null ? '' : color).trim()) continue;
     const key = matchKey(e1, color);
-    if (!idx.has(key)) idx.set(key, {
+    if (idx.has(key)) continue;
+    const values = {};
+    for (let j = 0; j < headers.length; j++) values[headers[j]] = row[j]; // headers are lowercased
+    idx.set(key, {
       id: idCol >= 0 ? row[idCol] : '', identifier: identCol >= 0 ? row[identCol] : '',
-      e1: String(e1 == null ? '' : e1).trim(), color: String(color == null ? '' : color).trim()
+      e1: String(e1 == null ? '' : e1).trim(), color: String(color == null ? '' : color).trim(),
+      values
     });
   }
   return { idx };
@@ -298,7 +303,7 @@ export default function createExternalRoot(rootElement) {
               if (m) {
                 if (m.id != null && String(m.id).trim()) r['id'] = m.id;
                 if (m.identifier != null && String(m.identifier).trim()) r['identifier'] = m.identifier;
-                r.__matched = true; matched++;
+                r.__matched = true; r.__export = m.values; matched++;
               } else {
                 r.__matched = false;
                 unmatched.push({ row: r.__row, e1: r['TB.PCM.E1ItemNumber'] || '', color: r['Color'] || '' });
@@ -318,7 +323,7 @@ export default function createExternalRoot(rootElement) {
           }
 
           const used = new Set();
-          outputRecords.forEach(r => Object.keys(r).forEach(k => { if (k !== '__row' && k !== '__matched') used.add(k); }));
+          outputRecords.forEach(r => Object.keys(r).forEach(k => { if (k !== '__row' && k !== '__matched' && k !== '__export') used.add(k); }));
 
           // Build option-list maps from the embedded snapshot.
           const meta = {};
@@ -338,20 +343,33 @@ export default function createExternalRoot(rootElement) {
           const unresolved = [];
           for (const r of outputRecords) {
             for (const f of Object.keys(r)) {
-              if (f === '__row' || f === '__matched') continue;
-              if (meta[f] && meta[f].isOption) r[f] = resolveValue(r[f], meta[f].map, f, r.__row, unresolved);
+              if (f === '__row' || f === '__matched' || f === '__export') continue;
+              if (meta[f] && meta[f].isOption) {
+                const res = resolveField(r[f], meta[f].map);
+                res.bad.forEach(b => unresolved.push({ row: r.__row, field: f, value: b }));
+                if (res.bad.length && updateMode) {
+                  const orig = r.__export ? r.__export[f.toLowerCase()] : '';   // keep existing CH value
+                  r[f] = (orig == null ? '' : orig);
+                } else {
+                  r[f] = res.value;   // create mode: blank if unresolved
+                }
+              }
             }
           }
 
           if (unresolved.length === 0) {
             log('All option-list values matched. ✓', 'g-ok');
+          } else if (updateMode) {
+            log(`⚠ ${unresolved.length} value(s) not found — the existing Content Hub value was kept for these:`, 'g-err');
+            unresolved.slice(0, 100).forEach(u => log(`   Row ${u.row} · ${u.field}: "${u.value}" (kept original)`, 'g-err'));
+            if (unresolved.length > 100) log(`   … and ${unresolved.length - 100} more`, 'g-err');
           } else {
             log(`⚠ ${unresolved.length} value(s) not found — these cells will be left BLANK in the output:`, 'g-err');
             unresolved.slice(0, 100).forEach(u => log(`   Row ${u.row} · ${u.field}: "${u.value}"`, 'g-err'));
             if (unresolved.length > 100) log(`   … and ${unresolved.length - 100} more`, 'g-err');
           }
 
-          if (dryRun) { log('Dry run complete — fix the values above (or leave them blank), then Generate.', 'g-info'); return; }
+          if (dryRun) { log('Dry run complete — review the items above, then Generate.', 'g-info'); return; }
 
           const outCols = OUT_COLS.filter(f => used.has(f));
           const outRows = [outCols];
@@ -364,7 +382,9 @@ export default function createExternalRoot(rootElement) {
           const fname = `ContentHub_TilesImport_${ts()}.xlsx`;
           downloadBlob(new Blob([arr], { type: 'application/octet-stream' }), fname);
           log(`✓ Generated ${fname} — ${outputRecords.length} ${updateMode ? 'update' : 'new'} row(s), sheet "${SHEET_NAME}".`, 'g-ok');
-          if (unresolved.length) log(`⚠ ${unresolved.length} unmatched value(s) were left blank (listed above).`, 'g-err');
+          if (unresolved.length) log(updateMode
+            ? `⚠ ${unresolved.length} unmatched value(s) kept their original Content Hub value (listed above).`
+            : `⚠ ${unresolved.length} unmatched value(s) were left blank (listed above).`, 'g-err');
         } catch (e) {
           log(`✗ ${e && e.message ? e.message : e}`, 'g-err');
         } finally {
