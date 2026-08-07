@@ -39,8 +39,16 @@ const FIELD_SOURCE = {
 };
 function sourceFor(field) { return FIELD_SOURCE[field] || field; }
 
+// Fixed category identifier for the Tile template.
+const TILE_CATEGORY = 'TB.PCM.Category.Tiles';
+// Content Hub required fields for M.PCM.Product (validated on NEW records).
+const REQUIRED_FIELDS = ['TB.PCM.ProductName', 'TB.PCM.Category', 'TB.PCM.Product.Manufacturer', 'Color', 'TB.PCM.Product.SKU'];
+
 // Intake friendly label (normalized) -> Content Hub field.
 const FIELD_MAP = {
+  'product name': 'TB.PCM.ProductName',
+  'sku': 'TB.PCM.Product.SKU',
+  'toll sku': 'TB.PCM.TollSKU',
   'manufacturer': 'TB.PCM.Product.Manufacturer',
   'brand': 'TB.PCM.Brand',
   'family/style name': 'TB.PCM.FamilyName',
@@ -67,12 +75,12 @@ const ITEM_COLS = [
 const ID_LABELS = { 'id': 'id', 'content hub id': 'id', 'identifier': 'identifier', 'content hub identifier': 'identifier' };
 
 const OUT_COLS = [
-  'id', 'identifier', 'TB.PCM.E1ItemNumber', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand',
-  'TB.PCM.FamilyName', 'Color', 'TB.PCM.TileColorFamily', 'TB.PCM.TileStyle', 'TB.PCM.TileSize',
-  'TB.PCM.Size', 'TB.PCM.TileMaterial', 'TB.PCM.TileFinish', 'TB.PCM.Product.TileUnitOfMeasure',
-  'TB.PCM.Product.TileThickness', 'TB.PCM.AreaOfApplication'
+  'id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU',
+  'TB.PCM.E1ItemNumber', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'Color',
+  'TB.PCM.TileColorFamily', 'TB.PCM.TileStyle', 'TB.PCM.TileSize', 'TB.PCM.Size', 'TB.PCM.TileMaterial',
+  'TB.PCM.TileFinish', 'TB.PCM.Product.TileUnitOfMeasure', 'TB.PCM.Product.TileThickness', 'TB.PCM.AreaOfApplication'
 ];
-const TEXT_FIELDS = new Set(['id', 'identifier', 'TB.PCM.E1ItemNumber', 'TB.PCM.FamilyName', 'Color', 'TB.PCM.Size', 'TB.PCM.Product.TileThickness', 'TB.PCM.AreaOfApplication']);
+const TEXT_FIELDS = new Set(['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.E1ItemNumber', 'TB.PCM.FamilyName', 'Color', 'TB.PCM.Size', 'TB.PCM.Product.TileThickness', 'TB.PCM.AreaOfApplication']);
 
 const CSS = `
   .g-wrap  { font-family: "Segoe UI", sans-serif; padding: 24px; max-width: 860px; }
@@ -178,6 +186,7 @@ function buildExportIndex(aoa) {
 
 function buildRecord(rowObj) {
   const rec = {};
+  rec['TB.PCM.Category'] = TILE_CATEGORY; // fixed for the Tile template
   for (const [lbl, chf] of Object.entries(ID_LABELS)) {
     const v = (rowObj[lbl] || '').trim();
     if (v && !rec[chf]) rec[chf] = v;
@@ -193,6 +202,12 @@ function buildRecord(rowObj) {
     const v = (rowObj[lbl] || '').trim();
     if (v) rec[chf] = v;
   }
+  // Potential fallbacks for required fields (applied later, NEW records only).
+  const d1 = (rowObj['description 1'] || '').trim();
+  const d2 = (rowObj['description 2'] || '').trim();
+  rec.__fallbackName = d1 || d2;
+  rec.__fallbackSku = ['backsplash item #', 'floor item #', 'shower floor item #', 'wall item #', 'listello item #']
+    .map(l => (rowObj[l] || '').trim()).filter(Boolean).join(',');
   return rec;
 }
 
@@ -322,8 +337,16 @@ export default function createExternalRoot(rootElement) {
             if (outputRecords.length === 0) { log('Nothing to update — no intake rows matched the export.', 'g-err'); return; }
           }
 
+          // NEW records only: fill required ProductName/SKU from fallbacks if absent.
+          if (!updateMode) {
+            for (const r of outputRecords) {
+              if (!String(r['TB.PCM.ProductName'] == null ? '' : r['TB.PCM.ProductName']).trim() && r.__fallbackName) r['TB.PCM.ProductName'] = r.__fallbackName;
+              if (!String(r['TB.PCM.Product.SKU'] == null ? '' : r['TB.PCM.Product.SKU']).trim() && r.__fallbackSku) r['TB.PCM.Product.SKU'] = r.__fallbackSku;
+            }
+          }
+
           const used = new Set();
-          outputRecords.forEach(r => Object.keys(r).forEach(k => { if (k !== '__row' && k !== '__matched' && k !== '__export') used.add(k); }));
+          outputRecords.forEach(r => Object.keys(r).forEach(k => { if (!k.startsWith('__')) used.add(k); }));
 
           // Build option-list maps from the embedded snapshot.
           const meta = {};
@@ -343,7 +366,7 @@ export default function createExternalRoot(rootElement) {
           const unresolved = [];
           for (const r of outputRecords) {
             for (const f of Object.keys(r)) {
-              if (f === '__row' || f === '__matched' || f === '__export') continue;
+              if (f.startsWith('__')) continue;
               if (meta[f] && meta[f].isOption) {
                 const res = resolveField(r[f], meta[f].map);
                 res.bad.forEach(b => unresolved.push({ row: r.__row, field: f, value: b }));
@@ -367,6 +390,21 @@ export default function createExternalRoot(rootElement) {
             log(`⚠ ${unresolved.length} value(s) not found — these cells will be left BLANK in the output:`, 'g-err');
             unresolved.slice(0, 100).forEach(u => log(`   Row ${u.row} · ${u.field}: "${u.value}"`, 'g-err'));
             if (unresolved.length > 100) log(`   … and ${unresolved.length - 100} more`, 'g-err');
+          }
+
+          // Required-field check (new records only; updates inherit existing values).
+          if (!updateMode) {
+            const missingReport = [];
+            for (const r of outputRecords) {
+              const miss = REQUIRED_FIELDS.filter(f => !String(r[f] == null ? '' : r[f]).trim());
+              if (miss.length) missingReport.push({ row: r.__row, miss });
+            }
+            if (missingReport.length) {
+              log(`⚠ Required field(s) missing on ${missingReport.length} new record(s) — Content Hub will reject these until filled:`, 'g-err');
+              missingReport.slice(0, 100).forEach(m => log(`   Row ${m.row}: ${m.miss.join(', ')}`, 'g-err'));
+            } else {
+              log('All required fields present. ✓', 'g-ok');
+            }
           }
 
           if (dryRun) { log('Dry run complete — review the items above, then Generate.', 'g-info'); return; }
