@@ -33,10 +33,10 @@ const SHEET_NAME = 'M.PCM.Product';
 // by the "Sync from Content Hub" button.
 const DEFAULT_LOOKUPS = {"TB.PCM.Manufacturer":[["TB.PCM.Manufacturer.Amerock","Amerock"],["TB.PCM.Manufacturer.Anderson","Anderson"],["TB.PCM.Manufacturer.ArizonaTile","Arizona Tile"],["TB.PCM.Manufacturer.BerensonHardware","Berenson Hardware"],["TB.PCM.Manufacturer.CaliforniaMantelFireplace","California Mantel & Fireplace"],["TB.PCM.Manufacturer.Consentino","Consentino"],["TB.PCM.Manufacturer.Cove","Cove"],["TB.PCM.Manufacturer.DalTile","DalTile"],["TB.PCM.Manufacturer.ElectricMirror","Electric Mirror"],["TB.PCM.Manufacturer.Emser","Emser"],["TB.PCM.Manufacturer.Emtek","Emtek"],["TB.PCM.Manufacturer.HomeSiteServices","Home Site Services"],["TB.PCM.Manufacturer.HunterDouglas","Hunter Douglas"],["TB.PCM.Manufacturer.Infratech","Infratech"],["TB.PCM.Manufacturer.JamisonCollections","Jamison Collections"],["TB.PCM.Manufacturer.JennAir","JennAir"],["TB.PCM.Manufacturer.KitchenAid","KitchenAid"],["TB.PCM.Manufacturer.Kohler","Kohler"],["TB.PCM.Manufacturer.Kwikset","Kwikset"],["TB.PCM.Manufacturer.Marazzi","Marazzi"],["TB.PCM.Manufacturer.Metropolitan","Metropolitan"],["TB.PCM.Manufacturer.Mohawk","Mohawk"],["TB.PCM.Manufacturer.PrecisionCabinetry","Precision Cabinetry"],["TB.PCM.Manufacturer.ProgressLighting","Progress Lighting"],["TB.PCM.Manufacturer.Provenza","Provenza"],["TB.PCM.Manufacturer.Shaw","Shaw"],["TB.PCM.Manufacturer.SherwinWilliams","Sherwin Williams"],["TB.PCM.Manufacturer.Sterling","Sterling"],["TB.PCM.Manufacturer.SubZero","Sub-Zero"],["TB.PCM.Manufacturer.TopKnobs","Top Knobs"],["TB.PCM.Manufacturer.Tuftex","Tuftex"],["TB.PCM.Manufacturer.Unbranded","Unbranded"],["TB.PCM.Manufacturer.WesternWindowSystems","Western Window Systems"],["TB.PCM.Manufacturer.Whirlpool","Whirlpool"],["TB.PCM.Manufacturer.Wolf","Wolf"],["TB.PCM.Manufacturer.CenturyCabinetry","Century Cabinetry"],["TB.PCM.Manufacturer.AmericanOlean","American Olean"],["TB.PCM.Manufacturer.UrbanEffects","Urban Effects"],["TB.PCM.Manufacturer.Coyote","Coyote"],["TB.PCM.Manufacturer.MSI","MSI"],["TB.PCM.Manufacturer.ASKO","ASKO"],["TB.PCM.Manufacturer.Mullican","Mullican"],["TB.PCM.Manufacturer.Mannington","Mannington"]],"TB.PCM.Brand":[["TB.PCM.Brand.AmericanOlean","American Olean"],["TB.PCM.Brand.ArizonaTile","Arizona Tile"],["TB.PCM.Brand.Daltile","Daltile"],["TB.PCM.Brand.EmserTile","Emser Tile"],["TB.PCM.Brand.Marazzi","Marazzi"],["TB.PCM.Brand.Shaw","Shaw"]],"TB.PCM.TileColorFamily":[["TB.PCM.TileColorFamily.Beige","Beige"],["TB.PCM.TileColorFamily.Black","Black"],["TB.PCM.TileColorFamily.Blue","Blue"],["TB.PCM.TileColorFamily.Brown","Brown"],["TB.PCM.TileColorFamily.Cream","Cream"],["TB.PCM.TileColorFamily.Gray","Gray"],["TB.PCM.TileColorFamily.Green","Green"],["TB.PCM.TileColorFamily.Multicolor","Multicolor"],["TB.PCM.TileColorFamily.Orange","Orange"],["TB.PCM.TileColorFamily.Pink","Pink"],["TB.PCM.TileColorFamily.Red","Red"],["TB.PCM.TileColorFamily.Taupe","Taupe"],["TB.PCM.TileColorFamily.TerraCotta","Terra Cotta"],["TB.PCM.TileColorFamily.White","White"],["TB.PCM.TileColorFamily.Yellow","Yellow"]],"TB.PCM.TileStyle":[["TB.PCM.TileStyle.Brick","Brick"],["TB.PCM.TileStyle.ConcreteLook","Concrete Look"],["TB.PCM.TileStyle.Fabric","Fabric"],["TB.PCM.TileStyle.Handmade","Handmade"],["TB.PCM.TileStyle.MarbleLook","Marble Look"],["TB.PCM.TileStyle.Mosaics","Mosaics"],["TB.PCM.TileStyle.NaturalStone","Natural Stone"],["TB.PCM.TileStyle.Patterned","Patterned"],["TB.PCM.TileStyle.Solid","Solid"],["TB.PCM.TileStyle.StoneLook","Stone Look"],["TB.PCM.TileStyle.Textured","Textured"],["TB.PCM.TileStyle.WoodLook","Wood Look"]],"TB.PCM.TileSize":[["TB.PCM.TileSize.HerringboneChevron","Herringbone/Chevron"],["TB.PCM.TileSize.Hexagon","Hexagon"],["TB.PCM.TileSize.LargeFormat","Large Format"],["TB.PCM.TileSize.Pebble","Pebble"],["TB.PCM.TileSize.PennyOval","Penny/Oval"],["TB.PCM.TileSize.Plank","Plank"],["TB.PCM.TileSize.Rectangle","Rectangle"],["TB.PCM.TileSize.Square","Square"],["TB.PCM.TileSize.Subway","Subway"],["TB.PCM.TileSize.UniqueShapes","Unique Shapes"]],"TB.PCM.TileMaterial":[["TB.PCM.TileMaterial.Ceramic","Ceramic"],["TB.PCM.TileMaterial.Porcelain","Porcelain"],["TB.PCM.TileMaterial.Glass","Glass"],["TB.PCM.TileMaterial.NaturalStoneMarble","Natural Stone - Marble"],["TB.PCM.TileMaterial.NaturalStoneTravertine","Natural Stone - Travertine"],["TB.PCM.TileMaterial.NaturalStoneLimestone","Natural Stone - Limestone"],["TB.PCM.TileMaterial.NaturalStoneMixed","Natural Stone - Mixed"]],"TB.PCM.TileFinish":[["TB.PCM.TileFinish.3DSculptural","3D/Sculptural"],["TB.PCM.TileFinish.Glossy","Glossy"],["TB.PCM.TileFinish.Matte","Matte"],["TB.PCM.TileFinish.Satin","Satin"],["TB.PCM.TileFinish.SlipResistant","Slip Resistant"],["TB.PCM.TileFinish.Smooth","Smooth"],["TB.PCM.TileFinish.Textured","Textured"]],"TB.PCM.UnitOfMeasure":[["TB.PCM.UnitOfMeasure.SQF","SQF"],["TB.PCM.UnitOfMeasure.Each","Each"]]};
 
-// Active lookups (starts as the embedded snapshot; may be replaced at load
-// from an external file, or refreshed by Sync from Content Hub).
-let lookups = DEFAULT_LOOKUPS;
-// The data-source-backed option lists to sync from Content Hub.
+// Option lists are read LIVE from Content Hub on demand and cached for the
+// session here (source -> [[identifier, label], ...]). DEFAULT_LOOKUPS is only
+// used as an offline fallback when the live read is unavailable.
+let liveCache = {};
 const DATA_SOURCES = Object.keys(DEFAULT_LOOKUPS);
 
 // Field -> backing option-list source (mirrors GetLookupSourceForCHField).
@@ -155,30 +155,26 @@ function dsLabel(v, culture) {
   return L[culture] || L['en-US'] || '';
 }
 
-// Pull every configured data source from Content Hub via the SDK client.
-// Returns { source: [[identifier, label], ...] } or null on hard failure.
-async function syncFromContentHub(client, culture, log) {
-  if (!client || !client.dataSources || typeof client.dataSources.getAsync !== 'function') {
-    log('✗ No Content Hub data source client available — open this inside Content Hub 4.2+.', 'g-err');
-    return null;
-  }
-  const result = {};
-  for (const name of DATA_SOURCES) {
+// Get one source's [[identifier, label], ...], reading live from Content Hub
+// (cached for the session). Falls back to the embedded snapshot if the live
+// read is unavailable or returns nothing.
+async function getSourcePairs(source, client, culture, log) {
+  if (liveCache[source]) return liveCache[source];
+  if (client && client.dataSources && typeof client.dataSources.getAsync === 'function') {
     try {
-      const ds = await client.dataSources.getAsync(name);
+      const ds = await client.dataSources.getAsync(source);
       const values = (ds && (ds.values || ds.Values)) || [];
       const pairs = [];
-      for (const v of values) {
-        const id = v.identifier || v.Identifier;
-        if (id) pairs.push([id, dsLabel(v, culture)]);
-      }
-      result[name] = pairs;
-      log(`  ${name}: ${pairs.length} value(s)`, pairs.length ? 'g-ok' : 'g-err');
+      for (const v of values) { const id = v.identifier || v.Identifier; if (id) pairs.push([id, dsLabel(v, culture)]); }
+      if (pairs.length) { liveCache[source] = pairs; return pairs; }
+      if (log) log(`  ${source}: 0 live values — using fallback snapshot`, 'g-skip');
     } catch (e) {
-      log(`  ${name}: sync failed — ${e && e.message ? e.message : e}`, 'g-err');
+      if (log) log(`  ${source}: live read failed (${e && e.message ? e.message : e}) — using fallback`, 'g-skip');
     }
   }
-  return result;
+  const fb = DEFAULT_LOOKUPS[source] || [];
+  liveCache[source] = fb;
+  return fb;
 }
 
 async function parseFileAOA(file, XLSX) {
@@ -282,7 +278,7 @@ export default function createExternalRoot(rootElement) {
           No export = create new records. With export = update: intake rows are matched by Item # + Color to pull id/identifier.
         </div>
         <div class="g-row">
-          <button class="g-btn g-sync" id="g-sync">🔄 Sync option lists from Content Hub</button>
+          <button class="g-btn g-sync" id="g-sync">🔄 Reload option lists from Content Hub</button>
           <span id="g-lookups" style="font-size:12px;color:#888"></span>
         </div>
         <div class="g-log" id="g-log"></div>
@@ -296,17 +292,9 @@ export default function createExternalRoot(rootElement) {
       const status = wrap.querySelector('#g-status'), logEl = wrap.querySelector('#g-log');
       let currentFile = null, currentExport = null;
 
-      const lookupCount = obj => Object.values(obj).reduce((a, v) => a + (v ? v.length : 0), 0);
-      function setLookupsStatus(srcLabel) { lookupsStatus.textContent = `Option lists: ${lookupCount(lookups)} values (${srcLabel}).`; }
-      setLookupsStatus('embedded snapshot');
-
-      // Optionally load lookups from an external file.
-      if (cfg.lookupsUrl) {
-        fetch(cfg.lookupsUrl, { cache: 'no-store' })
-          .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
-          .then(j => { lookups = j; setLookupsStatus('external file'); })
-          .catch(e => setLookupsStatus('embedded snapshot — external load failed: ' + e.message));
-      }
+      const lookupCount = () => Object.values(liveCache).reduce((a, v) => a + (v ? v.length : 0), 0);
+      function setLookupsStatus(note) { lookupsStatus.textContent = `Option lists: ${lookupCount()} values ${note}`; }
+      setLookupsStatus('— read live from Content Hub on first run.');
 
       function log(msg, cls) {
         logEl.style.display = 'block';
@@ -416,7 +404,7 @@ export default function createExternalRoot(rootElement) {
           for (const f of OUT_COLS) {
             if (!used.has(f) || TEXT_FIELDS.has(f)) { meta[f] = { isOption: false }; continue; }
             const src = sourceFor(f);
-            const pairs = lookups[src];
+            const pairs = await getSourcePairs(src, client, culture, log);
             if (pairs && pairs.length) {
               meta[f] = { isOption: true, map: buildLabelMap(pairs) };
               log(`  ${f} → ${src}: ${pairs.length} options`, 'g-info');
@@ -498,20 +486,16 @@ export default function createExternalRoot(rootElement) {
 
       syncBtn.addEventListener('click', async () => {
         clearLog(); syncBtn.disabled = true;
-        log('── SYNC OPTION LISTS FROM CONTENT HUB ──', 'g-info');
-        try {
-          const res = await syncFromContentHub(client, culture, log);
-          if (res && Object.keys(res).length) {
-            lookups = Object.assign({}, lookups, res);
-            setLookupsStatus('synced from Content Hub');
-            const bytes = new TextEncoder().encode(JSON.stringify(lookups));
-            downloadBlob(new Blob([bytes], { type: 'application/json' }), 'tile-lookups.json');
-            log(`✓ Synced ${Object.keys(res).length} option list(s), applied to this session, and downloaded tile-lookups.json.`, 'g-ok');
-            log('   Re-host tile-lookups.json at your lookupsUrl so everyone gets the update.', 'g-skip');
-          }
-        } catch (e) {
-          log(`✗ Sync failed: ${e && e.message ? e.message : e}`, 'g-err');
+        log('── RELOAD OPTION LISTS FROM CONTENT HUB ──', 'g-info');
+        liveCache = {}; // clear the session cache so values are re-fetched
+        let total = 0;
+        for (const name of DATA_SOURCES) {
+          const pairs = await getSourcePairs(name, client, culture, log);
+          total += pairs.length;
+          log(`  ${name}: ${pairs.length} value(s)`, pairs.length ? 'g-ok' : 'g-err');
         }
+        setLookupsStatus('— reloaded live from Content Hub.');
+        log(`✓ Loaded ${total} value(s) across ${DATA_SOURCES.length} option list(s).`, 'g-ok');
         syncBtn.disabled = false;
       });
     },
