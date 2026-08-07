@@ -28,8 +28,16 @@
 const SHEETJS_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
 const SHEET_NAME = 'M.PCM.Product';
 
-// Option-list snapshot: source -> [[identifier, displayLabel], ...]
-const LOOKUPS = {"TB.PCM.Manufacturer":[["TB.PCM.Manufacturer.Amerock","Amerock"],["TB.PCM.Manufacturer.Anderson","Anderson"],["TB.PCM.Manufacturer.ArizonaTile","Arizona Tile"],["TB.PCM.Manufacturer.BerensonHardware","Berenson Hardware"],["TB.PCM.Manufacturer.CaliforniaMantelFireplace","California Mantel & Fireplace"],["TB.PCM.Manufacturer.Consentino","Consentino"],["TB.PCM.Manufacturer.Cove","Cove"],["TB.PCM.Manufacturer.DalTile","DalTile"],["TB.PCM.Manufacturer.ElectricMirror","Electric Mirror"],["TB.PCM.Manufacturer.Emser","Emser"],["TB.PCM.Manufacturer.Emtek","Emtek"],["TB.PCM.Manufacturer.HomeSiteServices","Home Site Services"],["TB.PCM.Manufacturer.HunterDouglas","Hunter Douglas"],["TB.PCM.Manufacturer.Infratech","Infratech"],["TB.PCM.Manufacturer.JamisonCollections","Jamison Collections"],["TB.PCM.Manufacturer.JennAir","JennAir"],["TB.PCM.Manufacturer.KitchenAid","KitchenAid"],["TB.PCM.Manufacturer.Kohler","Kohler"],["TB.PCM.Manufacturer.Kwikset","Kwikset"],["TB.PCM.Manufacturer.Marazzi","Marazzi"],["TB.PCM.Manufacturer.Metropolitan","Metropolitan"],["TB.PCM.Manufacturer.Mohawk","Mohawk"],["TB.PCM.Manufacturer.PrecisionCabinetry","Precision Cabinetry"],["TB.PCM.Manufacturer.ProgressLighting","Progress Lighting"],["TB.PCM.Manufacturer.Provenza","Provenza"],["TB.PCM.Manufacturer.Shaw","Shaw"],["TB.PCM.Manufacturer.SherwinWilliams","Sherwin Williams"],["TB.PCM.Manufacturer.Sterling","Sterling"],["TB.PCM.Manufacturer.SubZero","Sub-Zero"],["TB.PCM.Manufacturer.TopKnobs","Top Knobs"],["TB.PCM.Manufacturer.Tuftex","Tuftex"],["TB.PCM.Manufacturer.Unbranded","Unbranded"],["TB.PCM.Manufacturer.WesternWindowSystems","Western Window Systems"],["TB.PCM.Manufacturer.Whirlpool","Whirlpool"],["TB.PCM.Manufacturer.Wolf","Wolf"],["TB.PCM.Manufacturer.CenturyCabinetry","Century Cabinetry"],["TB.PCM.Manufacturer.AmericanOlean","American Olean"],["TB.PCM.Manufacturer.UrbanEffects","Urban Effects"],["TB.PCM.Manufacturer.Coyote","Coyote"],["TB.PCM.Manufacturer.MSI","MSI"],["TB.PCM.Manufacturer.ASKO","ASKO"],["TB.PCM.Manufacturer.Mullican","Mullican"],["TB.PCM.Manufacturer.Mannington","Mannington"]],"TB.PCM.Brand":[["TB.PCM.Brand.AmericanOlean","American Olean"],["TB.PCM.Brand.ArizonaTile","Arizona Tile"],["TB.PCM.Brand.Daltile","Daltile"],["TB.PCM.Brand.EmserTile","Emser Tile"],["TB.PCM.Brand.Marazzi","Marazzi"],["TB.PCM.Brand.Shaw","Shaw"]],"TB.PCM.TileColorFamily":[["TB.PCM.TileColorFamily.Beige","Beige"],["TB.PCM.TileColorFamily.Black","Black"],["TB.PCM.TileColorFamily.Blue","Blue"],["TB.PCM.TileColorFamily.Brown","Brown"],["TB.PCM.TileColorFamily.Cream","Cream"],["TB.PCM.TileColorFamily.Gray","Gray"],["TB.PCM.TileColorFamily.Green","Green"],["TB.PCM.TileColorFamily.Multicolor","Multicolor"],["TB.PCM.TileColorFamily.Orange","Orange"],["TB.PCM.TileColorFamily.Pink","Pink"],["TB.PCM.TileColorFamily.Red","Red"],["TB.PCM.TileColorFamily.Taupe","Taupe"],["TB.PCM.TileColorFamily.TerraCotta","Terra Cotta"],["TB.PCM.TileColorFamily.White","White"],["TB.PCM.TileColorFamily.Yellow","Yellow"]],"TB.PCM.TileStyle":[["TB.PCM.TileStyle.Brick","Brick"],["TB.PCM.TileStyle.ConcreteLook","Concrete Look"],["TB.PCM.TileStyle.Fabric","Fabric"],["TB.PCM.TileStyle.Handmade","Handmade"],["TB.PCM.TileStyle.MarbleLook","Marble Look"],["TB.PCM.TileStyle.Mosaics","Mosaics"],["TB.PCM.TileStyle.NaturalStone","Natural Stone"],["TB.PCM.TileStyle.Patterned","Patterned"],["TB.PCM.TileStyle.Solid","Solid"],["TB.PCM.TileStyle.StoneLook","Stone Look"],["TB.PCM.TileStyle.Textured","Textured"],["TB.PCM.TileStyle.WoodLook","Wood Look"]],"TB.PCM.TileSize":[["TB.PCM.TileSize.HerringboneChevron","Herringbone/Chevron"],["TB.PCM.TileSize.Hexagon","Hexagon"],["TB.PCM.TileSize.LargeFormat","Large Format"],["TB.PCM.TileSize.Pebble","Pebble"],["TB.PCM.TileSize.PennyOval","Penny/Oval"],["TB.PCM.TileSize.Plank","Plank"],["TB.PCM.TileSize.Rectangle","Rectangle"],["TB.PCM.TileSize.Square","Square"],["TB.PCM.TileSize.Subway","Subway"],["TB.PCM.TileSize.UniqueShapes","Unique Shapes"]],"TB.PCM.TileMaterial":[["TB.PCM.TileMaterial.Ceramic","Ceramic"],["TB.PCM.TileMaterial.Porcelain","Porcelain"],["TB.PCM.TileMaterial.Glass","Glass"],["TB.PCM.TileMaterial.NaturalStoneMarble","Natural Stone - Marble"],["TB.PCM.TileMaterial.NaturalStoneTravertine","Natural Stone - Travertine"],["TB.PCM.TileMaterial.NaturalStoneLimestone","Natural Stone - Limestone"],["TB.PCM.TileMaterial.NaturalStoneMixed","Natural Stone - Mixed"]],"TB.PCM.TileFinish":[["TB.PCM.TileFinish.3DSculptural","3D/Sculptural"],["TB.PCM.TileFinish.Glossy","Glossy"],["TB.PCM.TileFinish.Matte","Matte"],["TB.PCM.TileFinish.Satin","Satin"],["TB.PCM.TileFinish.SlipResistant","Slip Resistant"],["TB.PCM.TileFinish.Smooth","Smooth"],["TB.PCM.TileFinish.Textured","Textured"]],"TB.PCM.UnitOfMeasure":[["TB.PCM.UnitOfMeasure.SQF","SQF"],["TB.PCM.UnitOfMeasure.Each","Each"]]};
+// Option-list snapshot (fallback): source -> [[identifier, displayLabel], ...].
+// This can be overridden at runtime by an external file (config.lookupsUrl) or
+// by the "Sync from Content Hub" button.
+const DEFAULT_LOOKUPS = {"TB.PCM.Manufacturer":[["TB.PCM.Manufacturer.Amerock","Amerock"],["TB.PCM.Manufacturer.Anderson","Anderson"],["TB.PCM.Manufacturer.ArizonaTile","Arizona Tile"],["TB.PCM.Manufacturer.BerensonHardware","Berenson Hardware"],["TB.PCM.Manufacturer.CaliforniaMantelFireplace","California Mantel & Fireplace"],["TB.PCM.Manufacturer.Consentino","Consentino"],["TB.PCM.Manufacturer.Cove","Cove"],["TB.PCM.Manufacturer.DalTile","DalTile"],["TB.PCM.Manufacturer.ElectricMirror","Electric Mirror"],["TB.PCM.Manufacturer.Emser","Emser"],["TB.PCM.Manufacturer.Emtek","Emtek"],["TB.PCM.Manufacturer.HomeSiteServices","Home Site Services"],["TB.PCM.Manufacturer.HunterDouglas","Hunter Douglas"],["TB.PCM.Manufacturer.Infratech","Infratech"],["TB.PCM.Manufacturer.JamisonCollections","Jamison Collections"],["TB.PCM.Manufacturer.JennAir","JennAir"],["TB.PCM.Manufacturer.KitchenAid","KitchenAid"],["TB.PCM.Manufacturer.Kohler","Kohler"],["TB.PCM.Manufacturer.Kwikset","Kwikset"],["TB.PCM.Manufacturer.Marazzi","Marazzi"],["TB.PCM.Manufacturer.Metropolitan","Metropolitan"],["TB.PCM.Manufacturer.Mohawk","Mohawk"],["TB.PCM.Manufacturer.PrecisionCabinetry","Precision Cabinetry"],["TB.PCM.Manufacturer.ProgressLighting","Progress Lighting"],["TB.PCM.Manufacturer.Provenza","Provenza"],["TB.PCM.Manufacturer.Shaw","Shaw"],["TB.PCM.Manufacturer.SherwinWilliams","Sherwin Williams"],["TB.PCM.Manufacturer.Sterling","Sterling"],["TB.PCM.Manufacturer.SubZero","Sub-Zero"],["TB.PCM.Manufacturer.TopKnobs","Top Knobs"],["TB.PCM.Manufacturer.Tuftex","Tuftex"],["TB.PCM.Manufacturer.Unbranded","Unbranded"],["TB.PCM.Manufacturer.WesternWindowSystems","Western Window Systems"],["TB.PCM.Manufacturer.Whirlpool","Whirlpool"],["TB.PCM.Manufacturer.Wolf","Wolf"],["TB.PCM.Manufacturer.CenturyCabinetry","Century Cabinetry"],["TB.PCM.Manufacturer.AmericanOlean","American Olean"],["TB.PCM.Manufacturer.UrbanEffects","Urban Effects"],["TB.PCM.Manufacturer.Coyote","Coyote"],["TB.PCM.Manufacturer.MSI","MSI"],["TB.PCM.Manufacturer.ASKO","ASKO"],["TB.PCM.Manufacturer.Mullican","Mullican"],["TB.PCM.Manufacturer.Mannington","Mannington"]],"TB.PCM.Brand":[["TB.PCM.Brand.AmericanOlean","American Olean"],["TB.PCM.Brand.ArizonaTile","Arizona Tile"],["TB.PCM.Brand.Daltile","Daltile"],["TB.PCM.Brand.EmserTile","Emser Tile"],["TB.PCM.Brand.Marazzi","Marazzi"],["TB.PCM.Brand.Shaw","Shaw"]],"TB.PCM.TileColorFamily":[["TB.PCM.TileColorFamily.Beige","Beige"],["TB.PCM.TileColorFamily.Black","Black"],["TB.PCM.TileColorFamily.Blue","Blue"],["TB.PCM.TileColorFamily.Brown","Brown"],["TB.PCM.TileColorFamily.Cream","Cream"],["TB.PCM.TileColorFamily.Gray","Gray"],["TB.PCM.TileColorFamily.Green","Green"],["TB.PCM.TileColorFamily.Multicolor","Multicolor"],["TB.PCM.TileColorFamily.Orange","Orange"],["TB.PCM.TileColorFamily.Pink","Pink"],["TB.PCM.TileColorFamily.Red","Red"],["TB.PCM.TileColorFamily.Taupe","Taupe"],["TB.PCM.TileColorFamily.TerraCotta","Terra Cotta"],["TB.PCM.TileColorFamily.White","White"],["TB.PCM.TileColorFamily.Yellow","Yellow"]],"TB.PCM.TileStyle":[["TB.PCM.TileStyle.Brick","Brick"],["TB.PCM.TileStyle.ConcreteLook","Concrete Look"],["TB.PCM.TileStyle.Fabric","Fabric"],["TB.PCM.TileStyle.Handmade","Handmade"],["TB.PCM.TileStyle.MarbleLook","Marble Look"],["TB.PCM.TileStyle.Mosaics","Mosaics"],["TB.PCM.TileStyle.NaturalStone","Natural Stone"],["TB.PCM.TileStyle.Patterned","Patterned"],["TB.PCM.TileStyle.Solid","Solid"],["TB.PCM.TileStyle.StoneLook","Stone Look"],["TB.PCM.TileStyle.Textured","Textured"],["TB.PCM.TileStyle.WoodLook","Wood Look"]],"TB.PCM.TileSize":[["TB.PCM.TileSize.HerringboneChevron","Herringbone/Chevron"],["TB.PCM.TileSize.Hexagon","Hexagon"],["TB.PCM.TileSize.LargeFormat","Large Format"],["TB.PCM.TileSize.Pebble","Pebble"],["TB.PCM.TileSize.PennyOval","Penny/Oval"],["TB.PCM.TileSize.Plank","Plank"],["TB.PCM.TileSize.Rectangle","Rectangle"],["TB.PCM.TileSize.Square","Square"],["TB.PCM.TileSize.Subway","Subway"],["TB.PCM.TileSize.UniqueShapes","Unique Shapes"]],"TB.PCM.TileMaterial":[["TB.PCM.TileMaterial.Ceramic","Ceramic"],["TB.PCM.TileMaterial.Porcelain","Porcelain"],["TB.PCM.TileMaterial.Glass","Glass"],["TB.PCM.TileMaterial.NaturalStoneMarble","Natural Stone - Marble"],["TB.PCM.TileMaterial.NaturalStoneTravertine","Natural Stone - Travertine"],["TB.PCM.TileMaterial.NaturalStoneLimestone","Natural Stone - Limestone"],["TB.PCM.TileMaterial.NaturalStoneMixed","Natural Stone - Mixed"]],"TB.PCM.TileFinish":[["TB.PCM.TileFinish.3DSculptural","3D/Sculptural"],["TB.PCM.TileFinish.Glossy","Glossy"],["TB.PCM.TileFinish.Matte","Matte"],["TB.PCM.TileFinish.Satin","Satin"],["TB.PCM.TileFinish.SlipResistant","Slip Resistant"],["TB.PCM.TileFinish.Smooth","Smooth"],["TB.PCM.TileFinish.Textured","Textured"]],"TB.PCM.UnitOfMeasure":[["TB.PCM.UnitOfMeasure.SQF","SQF"],["TB.PCM.UnitOfMeasure.Each","Each"]]};
+
+// Active lookups (starts as the embedded snapshot; may be replaced at load
+// from an external file, or refreshed by Sync from Content Hub).
+let lookups = DEFAULT_LOOKUPS;
+// The data-source-backed option lists to sync from Content Hub.
+const DATA_SOURCES = Object.keys(DEFAULT_LOOKUPS);
 
 // Field -> backing option-list source (mirrors GetLookupSourceForCHField).
 const FIELD_SOURCE = {
@@ -93,6 +101,7 @@ const CSS = `
   .g-btn:disabled { opacity: .5; cursor: not-allowed; }
   .g-dry   { background: #edf2f7; color: #2d3748; }
   .g-go    { background: #2f855a; color: #fff; }
+  .g-sync  { background: #6b46c1; color: #fff; }
   .g-log   { background: #1a202c; color: #e2e8f0; font-family: monospace; font-size: 12px; padding: 14px; border-radius: 6px; margin-top: 14px; max-height: 360px; overflow: auto; white-space: pre-wrap; display: none; }
   .g-ok { color: #68d391; } .g-skip { color: #cbd5e0; } .g-err { color: #fc8181; } .g-info { color: #90cdf4; }
 `;
@@ -136,6 +145,40 @@ function resolveField(value, map) {
     if (id) ids.push(id); else bad.push(tok);
   }
   return { value: ids.join('|'), bad };
+}
+
+// Read a culture-keyed label from an SDK data source value (Map or object).
+function dsLabel(v, culture) {
+  const L = v && (v.labels || v.Labels);
+  if (!L) return '';
+  if (typeof L.get === 'function') return L.get(culture) || L.get('en-US') || '';
+  return L[culture] || L['en-US'] || '';
+}
+
+// Pull every configured data source from Content Hub via the SDK client.
+// Returns { source: [[identifier, label], ...] } or null on hard failure.
+async function syncFromContentHub(client, culture, log) {
+  if (!client || !client.dataSources || typeof client.dataSources.getAsync !== 'function') {
+    log('✗ No Content Hub data source client available — open this inside Content Hub 4.2+.', 'g-err');
+    return null;
+  }
+  const result = {};
+  for (const name of DATA_SOURCES) {
+    try {
+      const ds = await client.dataSources.getAsync(name);
+      const values = (ds && (ds.values || ds.Values)) || [];
+      const pairs = [];
+      for (const v of values) {
+        const id = v.identifier || v.Identifier;
+        if (id) pairs.push([id, dsLabel(v, culture)]);
+      }
+      result[name] = pairs;
+      log(`  ${name}: ${pairs.length} value(s)`, pairs.length ? 'g-ok' : 'g-err');
+    } catch (e) {
+      log(`  ${name}: sync failed — ${e && e.message ? e.message : e}`, 'g-err');
+    }
+  }
+  return result;
 }
 
 async function parseFileAOA(file, XLSX) {
@@ -214,7 +257,10 @@ function buildRecord(rowObj) {
 // ---------------------------------------------------------------------------
 export default function createExternalRoot(rootElement) {
   return {
-    render() {
+    render(context) {
+      const client = context && context.client;
+      const cfg = (context && context.config) || {};
+      const culture = (context && (context.culture || (context.options && context.options.culture))) || 'en-US';
       const style = document.createElement('style'); style.textContent = CSS;
       const wrap = document.createElement('div'); wrap.className = 'g-wrap';
       wrap.innerHTML = `
@@ -235,6 +281,10 @@ export default function createExternalRoot(rootElement) {
         <div style="font-size:12px;color:#888;margin-bottom:6px">
           No export = create new records. With export = update: intake rows are matched by Item # + Color to pull id/identifier.
         </div>
+        <div class="g-row">
+          <button class="g-btn g-sync" id="g-sync">🔄 Sync option lists from Content Hub</button>
+          <span id="g-lookups" style="font-size:12px;color:#888"></span>
+        </div>
         <div class="g-log" id="g-log"></div>
       `;
       rootElement.innerHTML = ''; rootElement.appendChild(style); rootElement.appendChild(wrap);
@@ -242,8 +292,21 @@ export default function createExternalRoot(rootElement) {
       const drop = wrap.querySelector('#g-drop'), input = wrap.querySelector('#g-file');
       const drop2 = wrap.querySelector('#g-drop2'), input2 = wrap.querySelector('#g-file2');
       const dryBtn = wrap.querySelector('#g-dry'), goBtn = wrap.querySelector('#g-go');
+      const syncBtn = wrap.querySelector('#g-sync'), lookupsStatus = wrap.querySelector('#g-lookups');
       const status = wrap.querySelector('#g-status'), logEl = wrap.querySelector('#g-log');
       let currentFile = null, currentExport = null;
+
+      const lookupCount = obj => Object.values(obj).reduce((a, v) => a + (v ? v.length : 0), 0);
+      function setLookupsStatus(srcLabel) { lookupsStatus.textContent = `Option lists: ${lookupCount(lookups)} values (${srcLabel}).`; }
+      setLookupsStatus('embedded snapshot');
+
+      // Optionally load lookups from an external file.
+      if (cfg.lookupsUrl) {
+        fetch(cfg.lookupsUrl, { cache: 'no-store' })
+          .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+          .then(j => { lookups = j; setLookupsStatus('external file'); })
+          .catch(e => setLookupsStatus('embedded snapshot — external load failed: ' + e.message));
+      }
 
       function log(msg, cls) {
         logEl.style.display = 'block';
@@ -353,7 +416,7 @@ export default function createExternalRoot(rootElement) {
           for (const f of OUT_COLS) {
             if (!used.has(f) || TEXT_FIELDS.has(f)) { meta[f] = { isOption: false }; continue; }
             const src = sourceFor(f);
-            const pairs = LOOKUPS[src];
+            const pairs = lookups[src];
             if (pairs && pairs.length) {
               meta[f] = { isOption: true, map: buildLabelMap(pairs) };
               log(`  ${f} → ${src}: ${pairs.length} options`, 'g-info');
@@ -432,6 +495,25 @@ export default function createExternalRoot(rootElement) {
 
       dryBtn.addEventListener('click', () => run(true));
       goBtn.addEventListener('click', () => run(false));
+
+      syncBtn.addEventListener('click', async () => {
+        clearLog(); syncBtn.disabled = true;
+        log('── SYNC OPTION LISTS FROM CONTENT HUB ──', 'g-info');
+        try {
+          const res = await syncFromContentHub(client, culture, log);
+          if (res && Object.keys(res).length) {
+            lookups = Object.assign({}, lookups, res);
+            setLookupsStatus('synced from Content Hub');
+            const bytes = new TextEncoder().encode(JSON.stringify(lookups));
+            downloadBlob(new Blob([bytes], { type: 'application/json' }), 'tile-lookups.json');
+            log(`✓ Synced ${Object.keys(res).length} option list(s), applied to this session, and downloaded tile-lookups.json.`, 'g-ok');
+            log('   Re-host tile-lookups.json at your lookupsUrl so everyone gets the update.', 'g-skip');
+          }
+        } catch (e) {
+          log(`✗ Sync failed: ${e && e.message ? e.message : e}`, 'g-err');
+        }
+        syncBtn.disabled = false;
+      });
     },
     unmount() { rootElement.innerHTML = ''; }
   };
