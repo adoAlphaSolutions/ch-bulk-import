@@ -47,8 +47,10 @@ const FIELD_SOURCE = {
 };
 function sourceFor(field) { return FIELD_SOURCE[field] || field; }
 
-// Fixed category identifier for the Tile template.
-const TILE_CATEGORY = 'TB.PCM.Category.Tiles';
+// Default category selection (Tile).
+const DEFAULT_CATEGORY_ID = 'TB.PCM.Category.Tiles';
+// TB.PCM.Category taxonomy snapshot: [ [categoryId, label, [[subId, subLabel], ...]], ... ]
+const CATEGORIES = [["TB.PCM.Category.Appliances","Appliances",[["TB.PCM.Category.CookingPackage","Cooking Package"],["TB.PCM.Category.LaundryAppliances","Laundry Appliances"],["TB.PCM.Category.Other","Other"],["TB.PCM.Category.Refrigerators","Refrigerators"],["TB.PCM.Category.UnderCabinetRefrigeration","Under Cabinet Refrigeration"]]],["TB.PCM.Category.Baseboards","Baseboards",[]],["TB.PCM.Category.Plumbing.BathHardware","Bath Hardware",[]],["TB.PCM.Category.BathTubs","Bath Tubs",[]],["TB.PCM.Category.CabinetEnhancements","Cabinet Enhancements",[]],["TB.PCM.Category.CabinetHardware","Cabinet Hardware",[]],["TB.PCM.Category.Cabinets.Cabinets","Cabinets",[]],["TB.PCM.Category.Cabinets","Cabinets",[]],["TB.PCM.Category.Flooring.Carpet","Carpet",[]],["TB.PCM.Category.Countertops","Countertops",[]],["TB.PCM.Category.Doors","Doors",[]],["TB.PCM.Category.Exteriors","Exteriors",[["TB.PCM.Category.ColorSchemes","Color Schemes"]]],["TB.PCM.Category.Fireplaces","Fireplaces",[]],["TB.PCM.Category.FloorPlanOptions","Floor Plan Options",[["TB.PCM.Category.Interior","Interior"],["TB.PCM.Category.Outdoor","Outdoor"]]],["TB.PCM.Category.Flooring","Flooring",[["TB.PCM.Category.Hardwood","Hardwood"],["TB.PCM.Category.Flooring.Laminate","Laminate"]]],["TB.PCM.Category.InteriorD.GarageEpoxy","Garage Epoxy",[]],["TB.PCM.Category.HomeDetails","Home Details",[["TB.PCM.Category.BaseboardTrim","Baseboard & Trim"],["TB.PCM.Category.CeilingBeam","Ceiling Beam"],["TB.PCM.Category.Drywall","Drywall"],["TB.PCM.Category.Electrical","Electrical"],["TB.PCM.Category.EnergySolar","Energy & Solar"],["TB.PCM.Category.FireSuppression","Fire Suppression"],["TB.PCM.Category.HomeDet.Fireplace","Fireplace"],["TB.PCM.Category.GasSystems","Gas Systems"],["TB.PCM.Category.Gutters","Gutters"],["TB.PCM.Category.HVAC","HVAC"],["TB.PCM.Category.HumidifierSystems","Humidifier Systems"],["TB.PCM.Category.Insulation","Insulation"],["TB.PCM.Category.RoughPlumbing","Rough Plumbing"],["TB.PCM.Category.Tubs","Tubs"],["TB.PCM.Category.Wallfinish","Wall finish"],["TB.PCM.Category.WaterSystems","Water Systems"]]],["TB.PCM.Category.HomeTechnology","Home Technology",[["TB.PCM.Category.AudioVideo","Audio & Video"],["TB.PCM.Category.Network","Network"],["TB.PCM.Category.Security","Security"],["TB.PCM.Category.SmartLighting","Smart Lighting"]]],["TB.PCM.Category.InteriorDetails","Interior Details",[["TB.PCM.Category.Closets","Closets"],["TB.PCM.Category.DoorHardware","Door Hardware"],["TB.PCM.Category.InteriorD.Mirrors","Mirrors"],["TB.PCM.Category.Paint","Paint"],["TB.PCM.Category.Trim","Trim"],["TB.PCM.Category.WindowCoverings","Window Coverings"]]],["TB.PCM.Category.KitchenFaucets","Kitchen Faucets",[]],["TB.PCM.Category.Flooring.LVP","LVP",[]],["TB.PCM.Category.InteriorD.Lighting","Lighting",[]],["TB.PCM.Category.OutdoorOptions","Outdoor Options",[["TB.PCM.Category.DecksBalconies","Decks & Balconies"],["TB.PCM.Category.Fencing","Fencing"],["TB.PCM.Category.Hardscaping","Hardscaping"],["TB.PCM.Category.Landscaping","Landscaping"],["TB.PCM.Category.OutdoorAccessories","Outdoor Accessories"],["TB.PCM.Category.OutdoorFireplace","Outdoor Fireplace"],["TB.PCM.Category.OutdoorKitchen","Outdoor Kitchen"],["TB.PCM.Category.Pool","Pool"]]],["TB.PCM.Category.PerformanceShowering","Performance Showering",[]],["TB.PCM.Category.Plumbing","Plumbing",[["TB.PCM.Category.BathFaucets","Bath Faucets"],["TB.PCM.Category.BathSink","Bath Sink"],["TB.PCM.Category.EntertainmentFaucets","Entertainment Faucets"],["TB.PCM.Category.EntertainmentSink","Entertainment Sink"],["TB.PCM.Category.KitchenSink","Kitchen Sink"],["TB.PCM.Category.LaundryFaucets","Laundry Faucets"],["TB.PCM.Category.LaundrySink","Laundry Sink"],["TB.PCM.Category.ShowerPackage","Shower Package"],["TB.PCM.Category.SoapDispenser","Soap Dispenser"],["TB.PCM.Category.TubFaucets","Tub Faucets"],["TB.PCM.Category.TubShowerPackage","Tub/Shower Package"],["TB.PCM.Category.Plumbing.Tubs","Tubs"]]],["TB.PCM.Category.Plumbing.ShowerEnclosures","Shower Enclosures",[]],["TB.PCM.Category.Sinks","Sinks",[]],["TB.PCM.Category.SolidSurfaces","Solid Surfaces",[]],["TB.PCM.Category.Stairs","Stairs",[]],["TB.PCM.Category.Tiles","Tile",[]],["TB.PCM.Category.Plumbing.Toilets","Toilets",[]]];
 // Content Hub required fields for M.PCM.Product (validated on NEW records).
 const REQUIRED_FIELDS = ['TB.PCM.ProductName', 'TB.PCM.Category', 'TB.PCM.Product.Manufacturer', 'Color', 'TB.PCM.Product.SKU'];
 
@@ -225,7 +227,6 @@ function buildExportIndex(aoa) {
 
 function buildRecord(rowObj) {
   const rec = {};
-  rec['TB.PCM.Category'] = TILE_CATEGORY; // fixed for the Tile template
   for (const [lbl, chf] of Object.entries(ID_LABELS)) {
     const v = (rowObj[lbl] || '').trim();
     if (v && !rec[chf]) rec[chf] = v;
@@ -265,6 +266,12 @@ export default function createExternalRoot(rootElement) {
           The tool builds the Item Number + Area of Application, resolves option-list values to
           identifiers, and downloads a ready-to-import <b>${SHEET_NAME}</b> workbook. Add
           <code>id</code> and <code>identifier</code> columns for updates; leave them out for new records.</div>
+        <div class="g-row" style="margin-bottom:14px">
+          <label style="font-size:13px;color:#555">Category:</label>
+          <select id="g-cat" style="padding:6px;border:1px solid #cbd5e0;border-radius:6px;font-size:13px"></select>
+          <label style="font-size:13px;color:#555">Sub-category:</label>
+          <select id="g-subcat" style="padding:6px;border:1px solid #cbd5e0;border-radius:6px;font-size:13px"></select>
+        </div>
         <div class="g-drop" id="g-drop">📎 <b>1. Intake file</b> — drop your vendor .xlsx / .csv here, or click to browse</div>
         <input type="file" id="g-file" accept=".xlsx,.xls,.csv" style="display:none" />
         <div class="g-drop" id="g-drop2">🔁 <b>2. Content Hub export</b> (optional — only for UPDATES) — drop the export with id/identifier</div>
@@ -287,6 +294,24 @@ export default function createExternalRoot(rootElement) {
 
       const drop = wrap.querySelector('#g-drop'), input = wrap.querySelector('#g-file');
       const drop2 = wrap.querySelector('#g-drop2'), input2 = wrap.querySelector('#g-file2');
+      const catSel = wrap.querySelector('#g-cat'), subSel = wrap.querySelector('#g-subcat');
+
+      function fillSubcategories() {
+        const entry = CATEGORIES.find(c => c[0] === catSel.value);
+        const kids = entry ? entry[2] : [];
+        if (!kids.length) {
+          subSel.innerHTML = '<option value="">(no sub-categories)</option>';
+          subSel.disabled = true;
+        } else {
+          subSel.disabled = false;
+          subSel.innerHTML = '<option value="">— use category —</option>' +
+            kids.map(([id, label]) => `<option value="${id}">${label}</option>`).join('');
+        }
+      }
+      catSel.innerHTML = CATEGORIES.map(([id, label]) => `<option value="${id}">${label}</option>`).join('');
+      catSel.value = DEFAULT_CATEGORY_ID;
+      fillSubcategories();
+      catSel.addEventListener('change', fillSubcategories);
       const dryBtn = wrap.querySelector('#g-dry'), goBtn = wrap.querySelector('#g-go');
       const syncBtn = wrap.querySelector('#g-sync'), lookupsStatus = wrap.querySelector('#g-lookups');
       const status = wrap.querySelector('#g-status'), logEl = wrap.querySelector('#g-log');
@@ -351,7 +376,12 @@ export default function createExternalRoot(rootElement) {
             records.push(rec);
           }
 
+          // Category from the dropdowns: use the sub-category (leaf) if chosen, else the category.
+          const catValue = (subSel.value || catSel.value || '');
+          for (const r of records) r['TB.PCM.Category'] = catValue;
+
           log(`Data rows: ${records.length}. Recognized columns: ${rawHeaders.filter((h, i) => known.has(normHeaders[i])).length}.`, 'g-info');
+          log(`Category: ${catValue}`, 'g-info');
           if (skipped.length) log(`Skipped (reference-only): ${skipped.join(', ')}`, 'g-skip');
 
           // UPDATE mode: match intake rows to a Content Hub export by (E1 Item # + Color).
