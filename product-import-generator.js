@@ -27,6 +27,7 @@
 
 const SHEETJS_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
 const SHEET_NAME = 'M.PCM.Product';
+const CH_HOST = window.location.origin;
 
 // Option-list snapshot (fallback): source -> [[identifier, displayLabel], ...].
 // This can be overridden at runtime by an external file (config.lookupsUrl) or
@@ -51,6 +52,8 @@ function sourceFor(field) { return FIELD_SOURCE[field] || field; }
 const DEFAULT_CATEGORY_ID = 'TB.PCM.Category.Tiles';
 // TB.PCM.Category taxonomy snapshot: [ [categoryId, label, [[subId, subLabel], ...]], ... ]
 const CATEGORIES = [["TB.PCM.Category.Appliances","Appliances",[["TB.PCM.Category.CookingPackage","Cooking Package"],["TB.PCM.Category.LaundryAppliances","Laundry Appliances"],["TB.PCM.Category.Other","Other"],["TB.PCM.Category.Refrigerators","Refrigerators"],["TB.PCM.Category.UnderCabinetRefrigeration","Under Cabinet Refrigeration"]]],["TB.PCM.Category.Baseboards","Baseboards",[]],["TB.PCM.Category.Plumbing.BathHardware","Bath Hardware",[]],["TB.PCM.Category.BathTubs","Bath Tubs",[]],["TB.PCM.Category.CabinetEnhancements","Cabinet Enhancements",[]],["TB.PCM.Category.CabinetHardware","Cabinet Hardware",[]],["TB.PCM.Category.Cabinets.Cabinets","Cabinets",[]],["TB.PCM.Category.Cabinets","Cabinets",[]],["TB.PCM.Category.Flooring.Carpet","Carpet",[]],["TB.PCM.Category.Countertops","Countertops",[]],["TB.PCM.Category.Doors","Doors",[]],["TB.PCM.Category.Exteriors","Exteriors",[["TB.PCM.Category.ColorSchemes","Color Schemes"]]],["TB.PCM.Category.Fireplaces","Fireplaces",[]],["TB.PCM.Category.FloorPlanOptions","Floor Plan Options",[["TB.PCM.Category.Interior","Interior"],["TB.PCM.Category.Outdoor","Outdoor"]]],["TB.PCM.Category.Flooring","Flooring",[["TB.PCM.Category.Hardwood","Hardwood"],["TB.PCM.Category.Flooring.Laminate","Laminate"]]],["TB.PCM.Category.InteriorD.GarageEpoxy","Garage Epoxy",[]],["TB.PCM.Category.HomeDetails","Home Details",[["TB.PCM.Category.BaseboardTrim","Baseboard & Trim"],["TB.PCM.Category.CeilingBeam","Ceiling Beam"],["TB.PCM.Category.Drywall","Drywall"],["TB.PCM.Category.Electrical","Electrical"],["TB.PCM.Category.EnergySolar","Energy & Solar"],["TB.PCM.Category.FireSuppression","Fire Suppression"],["TB.PCM.Category.HomeDet.Fireplace","Fireplace"],["TB.PCM.Category.GasSystems","Gas Systems"],["TB.PCM.Category.Gutters","Gutters"],["TB.PCM.Category.HVAC","HVAC"],["TB.PCM.Category.HumidifierSystems","Humidifier Systems"],["TB.PCM.Category.Insulation","Insulation"],["TB.PCM.Category.RoughPlumbing","Rough Plumbing"],["TB.PCM.Category.Tubs","Tubs"],["TB.PCM.Category.Wallfinish","Wall finish"],["TB.PCM.Category.WaterSystems","Water Systems"]]],["TB.PCM.Category.HomeTechnology","Home Technology",[["TB.PCM.Category.AudioVideo","Audio & Video"],["TB.PCM.Category.Network","Network"],["TB.PCM.Category.Security","Security"],["TB.PCM.Category.SmartLighting","Smart Lighting"]]],["TB.PCM.Category.InteriorDetails","Interior Details",[["TB.PCM.Category.Closets","Closets"],["TB.PCM.Category.DoorHardware","Door Hardware"],["TB.PCM.Category.InteriorD.Mirrors","Mirrors"],["TB.PCM.Category.Paint","Paint"],["TB.PCM.Category.Trim","Trim"],["TB.PCM.Category.WindowCoverings","Window Coverings"]]],["TB.PCM.Category.KitchenFaucets","Kitchen Faucets",[]],["TB.PCM.Category.Flooring.LVP","LVP",[]],["TB.PCM.Category.InteriorD.Lighting","Lighting",[]],["TB.PCM.Category.OutdoorOptions","Outdoor Options",[["TB.PCM.Category.DecksBalconies","Decks & Balconies"],["TB.PCM.Category.Fencing","Fencing"],["TB.PCM.Category.Hardscaping","Hardscaping"],["TB.PCM.Category.Landscaping","Landscaping"],["TB.PCM.Category.OutdoorAccessories","Outdoor Accessories"],["TB.PCM.Category.OutdoorFireplace","Outdoor Fireplace"],["TB.PCM.Category.OutdoorKitchen","Outdoor Kitchen"],["TB.PCM.Category.Pool","Pool"]]],["TB.PCM.Category.PerformanceShowering","Performance Showering",[]],["TB.PCM.Category.Plumbing","Plumbing",[["TB.PCM.Category.BathFaucets","Bath Faucets"],["TB.PCM.Category.BathSink","Bath Sink"],["TB.PCM.Category.EntertainmentFaucets","Entertainment Faucets"],["TB.PCM.Category.EntertainmentSink","Entertainment Sink"],["TB.PCM.Category.KitchenSink","Kitchen Sink"],["TB.PCM.Category.LaundryFaucets","Laundry Faucets"],["TB.PCM.Category.LaundrySink","Laundry Sink"],["TB.PCM.Category.ShowerPackage","Shower Package"],["TB.PCM.Category.SoapDispenser","Soap Dispenser"],["TB.PCM.Category.TubFaucets","Tub Faucets"],["TB.PCM.Category.TubShowerPackage","Tub/Shower Package"],["TB.PCM.Category.Plumbing.Tubs","Tubs"]]],["TB.PCM.Category.Plumbing.ShowerEnclosures","Shower Enclosures",[]],["TB.PCM.Category.Sinks","Sinks",[]],["TB.PCM.Category.SolidSurfaces","Solid Surfaces",[]],["TB.PCM.Category.Stairs","Stairs",[]],["TB.PCM.Category.Tiles","Tile",[]],["TB.PCM.Category.Plumbing.Toilets","Toilets",[]]];
+// Active category tree (replaced by a live read from Content Hub when available).
+let categories = CATEGORIES;
 // Content Hub required fields for M.PCM.Product (validated on NEW records).
 const REQUIRED_FIELDS = ['TB.PCM.ProductName', 'TB.PCM.Category', 'TB.PCM.Product.Manufacturer', 'Color', 'TB.PCM.Product.SKU'];
 
@@ -150,6 +153,66 @@ function resolveField(value, map) {
 }
 
 // Read a culture-keyed label from an SDK data source value (Map or object).
+function readProp(item, name) {
+  const p = item && item.properties ? item.properties[name] : undefined;
+  if (p == null) return '';
+  if (typeof p === 'object') { const k = Object.keys(p); return k.length ? String(p[k[0]]) : ''; }
+  return String(p);
+}
+function itemId(it) {
+  if (it && it.id != null) return it.id;
+  if (it && it.self && it.self.href) return Number(it.self.href.split('/').pop());
+  return null;
+}
+
+// Read the TB.PCM.Category taxonomy live and build [ [catId, label, [[subId, subLabel]...]], ... ].
+async function loadCategoriesLive() {
+  const chql = `Definition.Name=='TB.PCM.Category'`;
+  const items = []; let skip = 0, safety = 0;
+  while (safety++ < 100) {
+    const url = `${CH_HOST}/api/entities/query?query=${encodeURIComponent(chql)}&members=TaxonomyLabel&skip=${skip}&take=200`;
+    const res = await fetch(url, { credentials: 'include', headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const arr = ((await res.json()) || {}).items || [];
+    if (!arr.length) break;
+    items.push(...arr);
+    if (arr.length < 200) break;
+    skip += 200;
+  }
+  if (!items.length) throw new Error('no items');
+  try { console.log('[category item sample]', JSON.stringify(items[0])); } catch (e) { /* noop */ }
+
+  const byId = new Map(), byIdent = new Map();
+  for (const it of items) {
+    const id = itemId(it), identifier = it.identifier || '';
+    const label = readProp(it, 'TaxonomyLabel') || readProp(it, 'Label') || identifier.split('.').pop();
+    const node = { id, identifier, label, parentId: null, children: [] };
+    if (id != null) byId.set(id, node);
+    if (identifier) byIdent.set(identifier, node);
+  }
+  for (const it of items) {
+    const rels = it.relations || {};
+    const rel = rels.TB_PCM_CategoryToSelf || rels['TB.PCM.CategoryToSelf'] || rels.CategoryToSelf;
+    let pref = rel && (rel.parent_id || rel.parent || (rel.parents && rel.parents[0]));
+    if (pref == null) continue;
+    const s = (typeof pref === 'object') ? (pref.href || pref.id || '') : String(pref);
+    const tail = String(s).split('/').pop();
+    let pid = null;
+    if (tail.indexOf('.') >= 0 && byIdent.has(tail)) pid = byIdent.get(tail).id;
+    else if (tail && !isNaN(Number(tail))) pid = Number(tail);
+    const node = byId.get(itemId(it));
+    if (node) node.parentId = pid;
+  }
+  const tops = [];
+  for (const n of byId.values()) {
+    if (n.parentId != null && byId.has(n.parentId)) byId.get(n.parentId).children.push(n);
+    else tops.push(n);
+  }
+  const cmp = (a, b) => String(a.label).localeCompare(String(b.label));
+  tops.sort(cmp); tops.forEach(t => t.children.sort(cmp));
+  return tops.map(t => [t.identifier, t.label, t.children.map(c => [c.identifier, c.label])]);
+}
+
 function dsLabel(v, culture) {
   const L = v && (v.labels || v.Labels);
   if (!L) return '';
@@ -271,6 +334,7 @@ export default function createExternalRoot(rootElement) {
           <select id="g-cat" style="padding:6px;border:1px solid #cbd5e0;border-radius:6px;font-size:13px"></select>
           <label style="font-size:13px;color:#555">Sub-category:</label>
           <select id="g-subcat" style="padding:6px;border:1px solid #cbd5e0;border-radius:6px;font-size:13px"></select>
+          <span id="g-catstatus" style="font-size:11px;color:#888"></span>
         </div>
         <div class="g-drop" id="g-drop">📎 <b>1. Intake file</b> — drop your vendor .xlsx / .csv here, or click to browse</div>
         <input type="file" id="g-file" accept=".xlsx,.xls,.csv" style="display:none" />
@@ -295,9 +359,10 @@ export default function createExternalRoot(rootElement) {
       const drop = wrap.querySelector('#g-drop'), input = wrap.querySelector('#g-file');
       const drop2 = wrap.querySelector('#g-drop2'), input2 = wrap.querySelector('#g-file2');
       const catSel = wrap.querySelector('#g-cat'), subSel = wrap.querySelector('#g-subcat');
+      const catStatus = wrap.querySelector('#g-catstatus');
 
       function fillSubcategories() {
-        const entry = CATEGORIES.find(c => c[0] === catSel.value);
+        const entry = categories.find(c => c[0] === catSel.value);
         const kids = entry ? entry[2] : [];
         if (!kids.length) {
           subSel.innerHTML = '<option value="">(no sub-categories)</option>';
@@ -308,10 +373,25 @@ export default function createExternalRoot(rootElement) {
             kids.map(([id, label]) => `<option value="${id}">${label}</option>`).join('');
         }
       }
-      catSel.innerHTML = CATEGORIES.map(([id, label]) => `<option value="${id}">${label}</option>`).join('');
-      catSel.value = DEFAULT_CATEGORY_ID;
-      fillSubcategories();
+      function fillCategories() {
+        const prev = catSel.value;
+        catSel.innerHTML = categories.map(([id, label]) => `<option value="${id}">${label}</option>`).join('');
+        catSel.value = categories.some(c => c[0] === prev) ? prev : (categories.some(c => c[0] === DEFAULT_CATEGORY_ID) ? DEFAULT_CATEGORY_ID : (categories[0] && categories[0][0]));
+        fillSubcategories();
+      }
+      fillCategories();
       catSel.addEventListener('change', fillSubcategories);
+
+      // Load the current category tree from Content Hub; fall back to the snapshot.
+      catStatus.textContent = 'categories: snapshot';
+      (async () => {
+        try {
+          const live = await loadCategoriesLive();
+          if (live && live.length) { categories = live; fillCategories(); catStatus.textContent = `categories: live (${live.length})`; }
+        } catch (e) {
+          catStatus.textContent = `categories: snapshot — live load failed (${e && e.message ? e.message : e})`;
+        }
+      })();
       const dryBtn = wrap.querySelector('#g-dry'), goBtn = wrap.querySelector('#g-go');
       const syncBtn = wrap.querySelector('#g-sync'), lookupsStatus = wrap.querySelector('#g-lookups');
       const status = wrap.querySelector('#g-status'), logEl = wrap.querySelector('#g-log');
