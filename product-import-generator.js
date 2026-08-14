@@ -62,7 +62,7 @@ const FLOORING_OUT = ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName
 const FLOORING_MATCH = [['TB.PCM.E1ItemNumber', 'Color'], ['TB.PCM.Product.SKU'], ['TB.PCM.FlooringManufacturerStyleNumber'], ['TB.PCM.Flooring.TollStyleNumber'], ['TB.PCM.FamilyName', 'Color']];
 function flooringCfg(label, sheetName, categoryValue) {
   return {
-    label, sheetName, categoryValue, supportsUpdate: true, matchStrategies: FLOORING_MATCH,
+    label, sheetName, sheetMatch: [String(sheetName).toLowerCase()], categoryValue, supportsUpdate: true, matchStrategies: FLOORING_MATCH,
     fieldMap: FLOORING_FIELDMAP, itemCols: null, specialFeatures: null, optionListFields: FLOORING_OPTS,
     outCols: FLOORING_OUT, requiredFields: ['TB.PCM.Category', 'TB.PCM.Product.Manufacturer', 'Color', 'TB.PCM.Product.SKU'], fallbacks: null
   };
@@ -129,7 +129,7 @@ const CATEGORY_CONFIGS = {
   'flooring-lvp': flooringCfg('Flooring — LVP', 'LVP', 'TB.PCM.Category.Flooring.LVP'),
   'flooring-laminate': flooringCfg('Flooring — Laminate', 'Laminate', 'TB.PCM.Category.Flooring.Laminate'),
   'cabinets-vanities': {
-    label: 'Cabinets — Vanities', categoryValue: 'TB.PCM.Category.Cabinets.Cabinets', supportsUpdate: false, matchStrategies: [],
+    label: 'Cabinets — Vanities', sheetName: 'Cabinets & Vanities', sheetMatch: ['vanit'], categoryValue: 'TB.PCM.Category.Cabinets.Cabinets', supportsUpdate: false, matchStrategies: [],
     fieldMap: {
       'manufacturer': 'TB.PCM.Product.Manufacturer', 'brand': 'TB.PCM.Brand', 'style/collection name': 'TB.PCM.FamilyName',
       'door material': 'TB.PCM.CabinetWoodType', 'door style': 'TB.PCM.Style', 'color': 'Color', 'color family': 'TB.PCM.CabinetColorFamily',
@@ -144,7 +144,7 @@ const CATEGORY_CONFIGS = {
     fallbacks: null
   },
   'cabinets-hardware': {
-    label: 'Cabinets — Hardware', categoryValue: 'TB.PCM.Category.CabinetHardware', supportsUpdate: false, matchStrategies: [],
+    label: 'Cabinets — Hardware', sheetName: 'Cabinet Hardware', sheetMatch: ['hardware'], categoryValue: 'TB.PCM.Category.CabinetHardware', supportsUpdate: false, matchStrategies: [],
     fieldMap: {
       'vendor sku': 'TB.PCM.Product.SKU', 'manufacturer': 'TB.PCM.Product.Manufacturer', 'brand': 'TB.PCM.Brand', 'style name': 'TB.PCM.FamilyName',
       'hardware style': 'TB.PCM.CabinetHardwareType', 'finish': 'Color', 'hardware color family': 'TB.PCM.HardwareColorFamily', 'size': 'TB.PCM.Size',
@@ -157,7 +157,7 @@ const CATEGORY_CONFIGS = {
     fallbacks: null
   },
   'cabinets-enhancements': {
-    label: 'Cabinets — Enhancements', categoryValue: 'TB.PCM.Category.CabinetEnhancements', supportsUpdate: false, matchStrategies: [],
+    label: 'Cabinets — Enhancements', sheetName: 'Cabinet Enhancements', sheetMatch: ['enhance'], categoryValue: 'TB.PCM.Category.CabinetEnhancements', supportsUpdate: false, matchStrategies: [],
     fieldMap: {
       'vendor sku': 'TB.PCM.Product.SKU', 'manufacturer': 'TB.PCM.Product.Manufacturer', 'enhancement name': 'TB.PCM.ProductName',
       'enhancement category': 'TB.PCM.CabinetEnhancementsType', 'enhancement location': 'TB.PCM.CabinetEnchancementLocation', 'size': 'TB.PCM.Size',
@@ -170,7 +170,13 @@ const CATEGORY_CONFIGS = {
     fallbacks: null
   }
 };
-const CONFIG_ORDER = ['tile', 'carpet', 'flooring-hardwood', 'flooring-lvp', 'flooring-laminate', 'cabinets-vanities', 'cabinets-hardware', 'cabinets-enhancements'];
+// Dropdown items. A "group" scans multiple sub-sheets and consolidates them.
+const DROPDOWN = [
+  { key: 'tile', label: 'Tile', group: ['tile'] },
+  { key: 'carpet', label: 'Carpet', group: ['carpet'] },
+  { key: 'flooring', label: 'Flooring (Hardwood / LVP / Laminate)', group: ['flooring-hardwood', 'flooring-lvp', 'flooring-laminate'] },
+  { key: 'cabinets', label: 'Cabinets (Vanities / Hardware / Enhancements)', group: ['cabinets-vanities', 'cabinets-hardware', 'cabinets-enhancements'] }
+];
 
 const CSS = `
   .g-wrap  { font-family: "Segoe UI", sans-serif; padding: 24px; max-width: 900px; }
@@ -375,10 +381,12 @@ export default function createExternalRoot(rootElement) {
       const status = wrap.querySelector('#g-status'), logEl = wrap.querySelector('#g-log');
       let currentFile = null, currentExport = null;
 
-      catSel.innerHTML = CONFIG_ORDER.map(k => `<option value="${k}">${CATEGORY_CONFIGS[k].label}</option>`).join('');
+      catSel.innerHTML = DROPDOWN.map(d => `<option value="${d.key}">${d.label}</option>`).join('');
+      function partsForSelection() { const item = DROPDOWN.find(d => d.key === catSel.value) || DROPDOWN[0]; return { item, parts: item.group.map(k => CATEGORY_CONFIGS[k]) }; }
       function updateCatNote() {
-        const cfg = CATEGORY_CONFIGS[catSel.value];
-        catNote.textContent = cfg.supportsUpdate ? 'supports create + update' : 'create-only (no updates)';
+        const { parts } = partsForSelection();
+        const upd = parts.every(p => p.supportsUpdate);
+        catNote.textContent = (parts.length > 1 ? `consolidates ${parts.length} sheets · ` : '') + (upd ? 'create + update' : 'create-only');
       }
       updateCatNote();
       catSel.addEventListener('change', updateCatNote);
@@ -417,67 +425,86 @@ export default function createExternalRoot(rootElement) {
 
       async function run(dryRun) {
         clearLog(); dryBtn.disabled = true; goBtn.disabled = true;
-        const cfg = CATEGORY_CONFIGS[catSel.value];
-        log(`${dryRun ? '── VALIDATE' : '── GENERATE'} · ${cfg.label} ──`, 'g-info');
+        const { item, parts } = partsForSelection();
+        const groupSupportsUpdate = parts.every(p => p.supportsUpdate);
+        log(`${dryRun ? '── VALIDATE' : '── GENERATE'} · ${item.label} ──`, 'g-info');
         try {
           const XLSX = await loadXLSX();
-          const parsed = await parseFileAOA(currentFile, XLSX, cfg.sheetName);
-          const aoa = parsed.aoa;
-          if (cfg.sheetName) log(`Reading sheet "${parsed.sheet}" (workbook sheets: ${parsed.sheets.join(', ')}).`, 'g-info');
-          if (!aoa || aoa.length < 2) { log(`No data rows found on sheet "${parsed.sheet}".`, 'g-err'); return; }
-          const rawHeaders = aoa[0].map(h => String(h == null ? '' : h).trim());
-          const normHeaders = rawHeaders.map(norm);
+          const wb = XLSX.read(await currentFile.arrayBuffer(), { type: 'array' });
+          const sheetNames = wb.SheetNames;
 
-          // Recognized columns for this category.
-          const known = new Set([...Object.keys(cfg.fieldMap), ...Object.keys(ID_LABELS)]);
-          if (cfg.itemCols) cfg.itemCols.forEach(i => known.add(i.label));
-          if (cfg.specialFeatures) cfg.specialFeatures.flags.forEach(f => known.add(f.label));
-          if (cfg.fallbacks && cfg.fallbacks.nameFrom) cfg.fallbacks.nameFrom.forEach(l => known.add(l));
+          const allRecords = [];
+          const optionFields = new Set();
+          const outColsOrder = [];
+          const usedSheets = new Set();
 
-          const records = [];
-          for (let i = 1; i < aoa.length; i++) {
-            const row = aoa[i];
-            if (!row.some(c => String(c == null ? '' : c).trim() !== '')) continue;
-            const obj = {}; for (let j = 0; j < normHeaders.length; j++) if (normHeaders[j]) obj[normHeaders[j]] = row[j];
-            const rec = buildRecord(cfg, obj); rec.__row = i + 1; records.push(rec);
+          for (const part of parts) {
+            // Pick this part's sheet (by keyword match; single categories use the first sheet).
+            let name = null;
+            if (part.sheetMatch) {
+              for (const kw of part.sheetMatch) { const f = sheetNames.find(n => !usedSheets.has(n) && norm(n).includes(kw)); if (f) { name = f; break; } }
+              if (!name) { if (parts.length > 1) log(`No sheet for ${part.label} (looking for: ${part.sheetMatch.join(', ')}).`, 'g-skip'); continue; }
+            } else { name = sheetNames[0]; }
+            usedSheets.add(name);
+            const aoa = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '', raw: false });
+            if (!aoa || aoa.length < 2) { log(`Sheet "${name}": no data — skipped.`, 'g-skip'); continue; }
+
+            const rawHeaders = aoa[0].map(h => String(h == null ? '' : h).trim());
+            const normHeaders = rawHeaders.map(norm);
+            const known = new Set([...Object.keys(part.fieldMap), ...Object.keys(ID_LABELS)]);
+            if (part.itemCols) part.itemCols.forEach(i => known.add(i.label));
+            if (part.specialFeatures) part.specialFeatures.flags.forEach(f => known.add(f.label));
+            if (part.fallbacks && part.fallbacks.nameFrom) part.fallbacks.nameFrom.forEach(l => known.add(l));
+
+            let n = 0;
+            for (let i = 1; i < aoa.length; i++) {
+              const row = aoa[i];
+              if (!row.some(c => String(c == null ? '' : c).trim() !== '')) continue;
+              const obj = {}; for (let j = 0; j < normHeaders.length; j++) if (normHeaders[j]) obj[normHeaders[j]] = row[j];
+              const rec = buildRecord(part, obj);
+              rec.__row = i + 1; rec.__cfg = part; rec.__sheet = name;
+              if (part.categoryValue) rec['TB.PCM.Category'] = part.categoryValue;
+              allRecords.push(rec); n++;
+            }
+            const skipped = rawHeaders.filter((h, i) => h && !known.has(normHeaders[i]));
+            log(`Sheet "${name}" → ${part.categoryValue ? part.categoryValue.split('.').pop() : ''}: ${n} row(s).`, 'g-info');
+            if (skipped.length) log(`  skipped: ${skipped.join(', ')}`, 'g-skip');
+            part.optionListFields.forEach(f => optionFields.add(f));
+            part.outCols.forEach(c => { if (!outColsOrder.includes(c)) outColsOrder.push(c); });
           }
-          // Fixed category (per-row categories come from the intake mapping).
-          if (cfg.categoryValue) for (const r of records) r['TB.PCM.Category'] = cfg.categoryValue;
 
-          const skipped = rawHeaders.filter((h, i) => h && !known.has(normHeaders[i]));
-          log(`Data rows: ${records.length}.`, 'g-info');
-          if (skipped.length) log(`Skipped (reference-only): ${skipped.join(', ')}`, 'g-skip');
+          if (!allRecords.length) { log('No data rows found in any sheet.', 'g-err'); return; }
+          if (parts.length > 1) log(`Total: ${allRecords.length} row(s) across ${usedSheets.size} sheet(s).`, 'g-info');
 
-          // Update matching.
+          // Update matching (only if the whole selection supports it).
           const wantUpdate = !!currentExport;
-          const updateMode = wantUpdate && cfg.supportsUpdate;
-          if (wantUpdate && !cfg.supportsUpdate) log('This category is create-only — the Content Hub export is ignored.', 'g-skip');
-          let outputRecords = records;
+          const updateMode = wantUpdate && groupSupportsUpdate;
+          if (wantUpdate && !groupSupportsUpdate) log('This category is create-only — the Content Hub export is ignored.', 'g-skip');
+          let outputRecords = allRecords;
           if (updateMode) {
-            const expParsed = await parseFileAOA(currentExport, XLSX);
-            const { maps, error } = buildExportIndex(expParsed.aoa, cfg.matchStrategies);
+            const strategies = parts[0].matchStrategies;
+            const expWb = XLSX.read(await currentExport.arrayBuffer(), { type: 'array' });
+            const expAoa = XLSX.utils.sheet_to_json(expWb.Sheets[expWb.SheetNames[0]], { header: 1, defval: '', raw: false });
+            const { maps, error } = buildExportIndex(expAoa, strategies);
             if (error) { log(`✗ Content Hub export: ${error}`, 'g-err'); return; }
-            log(`UPDATE mode — matching by: ${cfg.matchStrategies.map(s => s.join('+')).join('  or  ')}`, 'g-info');
+            log(`UPDATE mode — matching by: ${strategies.map(s => s.join('+')).join('  or  ')}`, 'g-info');
             let matched = 0; const unmatched = [];
-            for (const r of records) {
+            for (const r of allRecords) {
               let hit = null;
-              for (let si = 0; si < cfg.matchStrategies.length; si++) {
-                const key = keyFor(f => r[f], cfg.matchStrategies[si]);
-                if (key && maps[si].has(key)) { hit = maps[si].get(key); break; }
-              }
+              for (let si = 0; si < strategies.length; si++) { const key = keyFor(f => r[f], strategies[si]); if (key && maps[si].has(key)) { hit = maps[si].get(key); break; } }
               if (hit) {
                 if (hit.id != null && String(hit.id).trim()) r['id'] = hit.id;
                 if (hit.identifier != null && String(hit.identifier).trim()) r['identifier'] = hit.identifier;
                 r.__matched = true; r.__export = hit.values; matched++;
               } else { r.__matched = false; unmatched.push(r.__row); }
             }
-            log(`Matched ${matched} of ${records.length} row(s).`, matched ? 'g-ok' : 'g-err');
+            log(`Matched ${matched} of ${allRecords.length} row(s).`, matched ? 'g-ok' : 'g-err');
             if (unmatched.length) log(`Unmatched (skipped): row ${unmatched.join(', ')}`, 'g-err');
-            outputRecords = records.filter(r => r.__matched);
+            outputRecords = allRecords.filter(r => r.__matched);
             if (!outputRecords.length) { log('Nothing to update.', 'g-err'); return; }
           }
 
-          // NEW records only: fill ProductName/SKU from fallbacks.
+          // NEW records only: per-record fallbacks for ProductName/SKU.
           if (!updateMode) {
             for (const r of outputRecords) {
               if (!String(r['TB.PCM.ProductName'] == null ? '' : r['TB.PCM.ProductName']).trim() && r.__fallbackName) r['TB.PCM.ProductName'] = r.__fallbackName;
@@ -488,9 +515,9 @@ export default function createExternalRoot(rootElement) {
           const used = new Set();
           outputRecords.forEach(r => Object.keys(r).forEach(k => { if (!k.startsWith('__')) used.add(k); }));
 
-          // Resolve option-list fields for this category.
+          // Resolve option-list fields (union across the processed sheets).
           const meta = {};
-          for (const f of cfg.optionListFields) {
+          for (const f of optionFields) {
             if (!used.has(f)) continue;
             const src = sourceFor(f);
             const pairs = await getSourcePairs(src, client, culture, log);
@@ -498,7 +525,6 @@ export default function createExternalRoot(rootElement) {
             if (meta[f].isOption) log(`  ${f} → ${src}: ${pairs.length} options`, 'g-info');
             else log(`  ${f}: no option list (${src}) — passed through as text`, 'g-skip');
           }
-
           const unresolved = [];
           for (const r of outputRecords) {
             for (const f of Object.keys(r)) {
@@ -511,40 +537,29 @@ export default function createExternalRoot(rootElement) {
               }
             }
           }
-
           if (unresolved.length === 0) log('All option-list values matched. ✓', 'g-ok');
-          else if (updateMode) {
-            log(`⚠ ${unresolved.length} value(s) not found — existing Content Hub value kept:`, 'g-err');
-            unresolved.slice(0, 100).forEach(u => log(`   Row ${u.row} · ${u.field}: "${u.value}" (kept original)`, 'g-err'));
-          } else {
-            log(`⚠ ${unresolved.length} value(s) not found — left BLANK in output:`, 'g-err');
-            unresolved.slice(0, 100).forEach(u => log(`   Row ${u.row} · ${u.field}: "${u.value}"`, 'g-err'));
-          }
+          else if (updateMode) { log(`⚠ ${unresolved.length} value(s) not found — existing value kept:`, 'g-err'); unresolved.slice(0, 100).forEach(u => log(`   Row ${u.row} · ${u.field}: "${u.value}" (kept)`, 'g-err')); }
+          else { log(`⚠ ${unresolved.length} value(s) not found — left BLANK:`, 'g-err'); unresolved.slice(0, 100).forEach(u => log(`   Row ${u.row} · ${u.field}: "${u.value}"`, 'g-err')); }
           if (unresolved.length > 100) log(`   … and ${unresolved.length - 100} more`, 'g-err');
 
-          // Required-field check (new records only).
+          // Required-field check per record's sub-config (new records only).
           if (!updateMode) {
             const missing = [];
-            for (const r of outputRecords) {
-              const m = cfg.requiredFields.filter(f => !String(r[f] == null ? '' : r[f]).trim());
-              if (m.length) missing.push({ row: r.__row, m });
-            }
-            if (missing.length) {
-              log(`⚠ Required field(s) missing on ${missing.length} new record(s):`, 'g-err');
-              missing.slice(0, 100).forEach(x => log(`   Row ${x.row}: ${x.m.join(', ')}`, 'g-err'));
-            } else log('All required fields present. ✓', 'g-ok');
+            for (const r of outputRecords) { const m = r.__cfg.requiredFields.filter(f => !String(r[f] == null ? '' : r[f]).trim()); if (m.length) missing.push({ row: r.__row, m }); }
+            if (missing.length) { log(`⚠ Required field(s) missing on ${missing.length} new record(s):`, 'g-err'); missing.slice(0, 100).forEach(x => log(`   Row ${x.row}: ${x.m.join(', ')}`, 'g-err')); }
+            else log('All required fields present. ✓', 'g-ok');
           }
 
           if (dryRun) { log('Dry run complete — review above, then Generate.', 'g-info'); return; }
 
-          const outCols = cfg.outCols.filter(f => used.has(f));
+          const outCols = outColsOrder.filter(f => used.has(f));
           const outRows = [outCols];
           for (const r of outputRecords) outRows.push(outCols.map(f => (r[f] == null ? '' : r[f])));
           const ws = XLSX.utils.aoa_to_sheet(outRows);
-          const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, SHEET_NAME);
-          const arr = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-          const tag = cfg.label.replace(/[^a-z0-9]+/gi, '');
+          const wbOut = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wbOut, ws, SHEET_NAME);
+          const arr = XLSX.write(wbOut, { bookType: 'xlsx', type: 'array' });
+          const tag = item.label.replace(/[^a-z0-9]+/gi, '');
           const fname = `ContentHub_${tag}Import_${ts()}.xlsx`;
           downloadBlob(new Blob([arr], { type: 'application/octet-stream' }), fname);
           log(`✓ Generated ${fname} — ${outputRecords.length} ${updateMode ? 'update' : 'new'} row(s).`, 'g-ok');
