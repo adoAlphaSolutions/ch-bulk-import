@@ -43,6 +43,31 @@ function sourceFor(field) { return FIELD_SOURCE[field] || field; }
 
 const ID_LABELS = { 'id': 'id', 'content hub id': 'id', 'identifier': 'identifier', 'content hub identifier': 'identifier' };
 
+// ---- Flooring shared config (one sheet per sub-category in the workbook) ----
+const FLOORING_FIELDMAP = {
+  'item #': 'TB.PCM.E1ItemNumber', 'vendor sku (if available)': 'TB.PCM.Product.SKU', 'manufacturer': 'TB.PCM.Product.Manufacturer',
+  'brand': 'TB.PCM.Brand', 'toll family/style name': 'TB.PCM.FamilyName', 'toll style number': 'TB.PCM.Flooring.TollStyleNumber',
+  'toll color name': 'Color', 'toll color number': 'TB.PCM.Product.ColorNumber',
+  'manufacturer family name (if product is private label)': 'TB.PCM.FlooringManufacturerFamilyName',
+  'manufacturer style number (if product is private label)': 'TB.PCM.FlooringManufacturerStyleNumber',
+  'manufacturer color name (if product is private label)': 'TB.PCM.FlooringManufacturerColorName',
+  'manufacturer color number (if product is private label)': 'TB.PCM.FlooringManufacturerColorNumber',
+  'color family': 'TB.PCM.FlooringColorFamily', 'color variation': 'TB.PCM.ColorVariation', 'species': 'TB.PCM.FlooringSpecies',
+  'surface texture/visual': 'TB.PCM.SurfaceTextureVisual', 'finish/coating': 'TB.PCM.FinishCoating', 'wear layer (mil)': 'TB.PCM.FlooringWearLayer',
+  'thickness': 'TB.PCM.FlooringThickness', 'width (in)': 'TB.PCM.FlooringWidth', 'length (in)': 'TB.PCM.FlooringLength',
+  'product description': 'TB.PCM.ProductDescription', 'divisions selected': 'TB.PCM.DivisionSelected'
+};
+const FLOORING_OPTS = ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FlooringColorFamily', 'TB.PCM.ColorVariation', 'TB.PCM.FlooringSpecies', 'TB.PCM.SurfaceTextureVisual', 'TB.PCM.DivisionSelected'];
+const FLOORING_OUT = ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.E1ItemNumber', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'TB.PCM.Flooring.TollStyleNumber', 'Color', 'TB.PCM.Product.ColorNumber', 'TB.PCM.FlooringManufacturerFamilyName', 'TB.PCM.FlooringManufacturerStyleNumber', 'TB.PCM.FlooringManufacturerColorName', 'TB.PCM.FlooringManufacturerColorNumber', 'TB.PCM.FlooringColorFamily', 'TB.PCM.ColorVariation', 'TB.PCM.FlooringSpecies', 'TB.PCM.SurfaceTextureVisual', 'TB.PCM.FinishCoating', 'TB.PCM.FlooringWearLayer', 'TB.PCM.FlooringThickness', 'TB.PCM.FlooringWidth', 'TB.PCM.FlooringLength', 'TB.PCM.ProductDescription', 'TB.PCM.DivisionSelected'];
+const FLOORING_MATCH = [['TB.PCM.E1ItemNumber', 'Color'], ['TB.PCM.Product.SKU'], ['TB.PCM.FlooringManufacturerStyleNumber'], ['TB.PCM.Flooring.TollStyleNumber'], ['TB.PCM.FamilyName', 'Color']];
+function flooringCfg(label, sheetName, categoryValue) {
+  return {
+    label, sheetName, categoryValue, supportsUpdate: true, matchStrategies: FLOORING_MATCH,
+    fieldMap: FLOORING_FIELDMAP, itemCols: null, specialFeatures: null, optionListFields: FLOORING_OPTS,
+    outCols: FLOORING_OUT, requiredFields: ['TB.PCM.Category', 'TB.PCM.Product.Manufacturer', 'Color', 'TB.PCM.Product.SKU'], fallbacks: null
+  };
+}
+
 // ---- Per-category configuration -------------------------------------------
 const CATEGORY_CONFIGS = {
   tile: {
@@ -100,26 +125,9 @@ const CATEGORY_CONFIGS = {
     requiredFields: ['TB.PCM.Category', 'TB.PCM.Product.Manufacturer', 'Color', 'TB.PCM.E1ItemNumber'],
     fallbacks: null
   },
-  flooring: {
-    label: 'Flooring (Hardwood / LVP / Laminate)', categoryValue: null, supportsUpdate: true,
-    matchStrategies: [['TB.PCM.E1ItemNumber', 'Color'], ['TB.PCM.Product.SKU'], ['TB.PCM.FlooringManufacturerStyleNumber'], ['TB.PCM.Flooring.TollStyleNumber'], ['TB.PCM.FamilyName', 'Color']],
-    fieldMap: {
-      'category (hardwood/lvp/laminate)': 'TB.PCM.Category', 'item #': 'TB.PCM.E1ItemNumber', 'vendor sku': 'TB.PCM.Product.SKU',
-      'manufacturer': 'TB.PCM.Product.Manufacturer', 'brand': 'TB.PCM.Brand', 'toll family/style name': 'TB.PCM.FamilyName',
-      'toll style number': 'TB.PCM.Flooring.TollStyleNumber', 'toll color name': 'Color', 'toll color number': 'TB.PCM.Product.ColorNumber',
-      'mfr family name (private label)': 'TB.PCM.FlooringManufacturerFamilyName', 'mfr style number (private label)': 'TB.PCM.FlooringManufacturerStyleNumber',
-      'mfr color name (private label)': 'TB.PCM.FlooringManufacturerColorName', 'mfr color number (private label)': 'TB.PCM.FlooringManufacturerColorNumber',
-      'color family': 'TB.PCM.FlooringColorFamily', 'color variation': 'TB.PCM.ColorVariation', 'species': 'TB.PCM.FlooringSpecies',
-      'surface texture/visual': 'TB.PCM.SurfaceTextureVisual', 'finish/coating': 'TB.PCM.FinishCoating', 'wear layer': 'TB.PCM.FlooringWearLayer',
-      'thickness': 'TB.PCM.FlooringThickness', 'width (in)': 'TB.PCM.FlooringWidth', 'length (in)': 'TB.PCM.FlooringLength',
-      'product description': 'TB.PCM.ProductDescription', 'division availability': 'TB.PCM.DivisionSelected'
-    },
-    itemCols: null, specialFeatures: null,
-    optionListFields: ['TB.PCM.Category', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FlooringColorFamily', 'TB.PCM.ColorVariation', 'TB.PCM.FlooringSpecies', 'TB.PCM.SurfaceTextureVisual', 'TB.PCM.DivisionSelected'],
-    outCols: ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.E1ItemNumber', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'TB.PCM.Flooring.TollStyleNumber', 'Color', 'TB.PCM.Product.ColorNumber', 'TB.PCM.FlooringManufacturerFamilyName', 'TB.PCM.FlooringManufacturerStyleNumber', 'TB.PCM.FlooringManufacturerColorName', 'TB.PCM.FlooringManufacturerColorNumber', 'TB.PCM.FlooringColorFamily', 'TB.PCM.ColorVariation', 'TB.PCM.FlooringSpecies', 'TB.PCM.SurfaceTextureVisual', 'TB.PCM.FinishCoating', 'TB.PCM.FlooringWearLayer', 'TB.PCM.FlooringThickness', 'TB.PCM.FlooringWidth', 'TB.PCM.FlooringLength', 'TB.PCM.ProductDescription', 'TB.PCM.DivisionSelected'],
-    requiredFields: ['TB.PCM.Category', 'TB.PCM.Product.Manufacturer', 'Color', 'TB.PCM.Product.SKU'],
-    fallbacks: null
-  },
+  'flooring-hardwood': flooringCfg('Flooring — Hardwood', 'Hardwood', 'TB.PCM.Category.Hardwood'),
+  'flooring-lvp': flooringCfg('Flooring — LVP', 'LVP', 'TB.PCM.Category.Flooring.LVP'),
+  'flooring-laminate': flooringCfg('Flooring — Laminate', 'Laminate', 'TB.PCM.Category.Flooring.Laminate'),
   'cabinets-vanities': {
     label: 'Cabinets — Vanities', categoryValue: 'TB.PCM.Category.Cabinets.Cabinets', supportsUpdate: false, matchStrategies: [],
     fieldMap: {
@@ -162,7 +170,7 @@ const CATEGORY_CONFIGS = {
     fallbacks: null
   }
 };
-const CONFIG_ORDER = ['tile', 'carpet', 'flooring', 'cabinets-vanities', 'cabinets-hardware', 'cabinets-enhancements'];
+const CONFIG_ORDER = ['tile', 'carpet', 'flooring-hardwood', 'flooring-lvp', 'flooring-laminate', 'cabinets-vanities', 'cabinets-hardware', 'cabinets-enhancements'];
 
 const CSS = `
   .g-wrap  { font-family: "Segoe UI", sans-serif; padding: 24px; max-width: 900px; }
@@ -244,11 +252,17 @@ function resolveField(value, map) {
   return { value: ids.join('|'), bad };
 }
 
-async function parseFileAOA(file, XLSX) {
+async function parseFileAOA(file, XLSX, sheetName) {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+  let name = wb.SheetNames[0];
+  if (sheetName) {
+    const found = wb.SheetNames.find(n => String(n).trim().toLowerCase() === String(sheetName).trim().toLowerCase());
+    if (found) name = found;
+  }
+  const ws = wb.Sheets[name];
+  const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+  return { aoa, sheet: name, sheets: wb.SheetNames };
 }
 
 function ts() { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
@@ -407,8 +421,10 @@ export default function createExternalRoot(rootElement) {
         log(`${dryRun ? '── VALIDATE' : '── GENERATE'} · ${cfg.label} ──`, 'g-info');
         try {
           const XLSX = await loadXLSX();
-          const aoa = await parseFileAOA(currentFile, XLSX);
-          if (!aoa || aoa.length < 2) { log('No data rows found.', 'g-err'); return; }
+          const parsed = await parseFileAOA(currentFile, XLSX, cfg.sheetName);
+          const aoa = parsed.aoa;
+          if (cfg.sheetName) log(`Reading sheet "${parsed.sheet}" (workbook sheets: ${parsed.sheets.join(', ')}).`, 'g-info');
+          if (!aoa || aoa.length < 2) { log(`No data rows found on sheet "${parsed.sheet}".`, 'g-err'); return; }
           const rawHeaders = aoa[0].map(h => String(h == null ? '' : h).trim());
           const normHeaders = rawHeaders.map(norm);
 
@@ -438,8 +454,8 @@ export default function createExternalRoot(rootElement) {
           if (wantUpdate && !cfg.supportsUpdate) log('This category is create-only — the Content Hub export is ignored.', 'g-skip');
           let outputRecords = records;
           if (updateMode) {
-            const expAoa = await parseFileAOA(currentExport, XLSX);
-            const { maps, error } = buildExportIndex(expAoa, cfg.matchStrategies);
+            const expParsed = await parseFileAOA(currentExport, XLSX);
+            const { maps, error } = buildExportIndex(expParsed.aoa, cfg.matchStrategies);
             if (error) { log(`✗ Content Hub export: ${error}`, 'g-err'); return; }
             log(`UPDATE mode — matching by: ${cfg.matchStrategies.map(s => s.join('+')).join('  or  ')}`, 'g-info');
             let matched = 0; const unmatched = [];
