@@ -128,7 +128,8 @@ const CATEGORY_CONFIGS = {
   },
   countertops: {
     label: 'Countertops', categoryValue: 'TB.PCM.Category.Countertops', supportsUpdate: true,
-    matchStrategies: [['TB.PCM.Product.SKU']],
+    // Match key: the three item# columns concatenate into E1ItemNumber, matched with Color.
+    matchStrategies: [['TB.PCM.E1ItemNumber', 'Color']],
     fieldMap: {
       'product name': 'TB.PCM.ProductName', 'sku': 'TB.PCM.Product.SKU', 'toll sku': 'TB.PCM.TollSKU',
       'manufacturer': 'TB.PCM.Product.Manufacturer', 'brand': 'TB.PCM.Brand', 'thickness': 'TB.PCM.Countertops.Thickness',
@@ -136,9 +137,11 @@ const CATEGORY_CONFIGS = {
       'look': 'TB.PCM.Countertops.Look', 'finish': 'TB.PCM.CountertopsFinish', 'product description': 'TB.PCM.ProductDescription',
       'area of application': 'TB.PCM.AreaOfApplication', 'selected division': 'TB.PCM.DivisionSelected'
     },
-    itemCols: null, specialFeatures: null,
+    // Item# columns concatenate (comma-joined) into TB.PCM.E1ItemNumber; no AreaOfApplication.
+    itemCols: [{ label: 'countertop item #' }, { label: 'wall tile item #' }, { label: 'backsplash item #' }],
+    specialFeatures: null,
     optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.CountertopsColorFamily', 'TB.PCM.CountertopsMaterial', 'TB.PCM.Countertops.Look', 'TB.PCM.CountertopsFinish', 'TB.PCM.AreaOfApplication', 'TB.PCM.DivisionSelected'],
-    outCols: ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.Countertops.Thickness', 'Color', 'TB.PCM.ColorFamily', 'TB.PCM.CountertopsColorFamily', 'TB.PCM.CountertopsMaterial', 'TB.PCM.Countertops.Look', 'TB.PCM.CountertopsFinish', 'TB.PCM.ProductDescription', 'TB.PCM.AreaOfApplication', 'TB.PCM.DivisionSelected'],
+    outCols: ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.E1ItemNumber', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.Countertops.Thickness', 'Color', 'TB.PCM.ColorFamily', 'TB.PCM.CountertopsColorFamily', 'TB.PCM.CountertopsMaterial', 'TB.PCM.Countertops.Look', 'TB.PCM.CountertopsFinish', 'TB.PCM.ProductDescription', 'TB.PCM.AreaOfApplication', 'TB.PCM.DivisionSelected'],
     requiredFields: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.Manufacturer', 'Color', 'TB.PCM.Product.SKU'],
     fallbacks: null
   },
@@ -307,7 +310,7 @@ function buildRecord(cfg, rowObj) {
   }
   if (cfg.itemCols) {
     const e1 = [], aoa = [];
-    for (const it of cfg.itemCols) { const v = (rowObj[it.label] || '').trim(); if (v) { e1.push(v); aoa.push(it.aoa); } }
+    for (const it of cfg.itemCols) { const v = (rowObj[it.label] || '').trim(); if (v) { e1.push(v); if (it.aoa) aoa.push(it.aoa); } }
     if (e1.length) rec['TB.PCM.E1ItemNumber'] = e1.join(',');
     if (aoa.length) rec['TB.PCM.AreaOfApplication'] = aoa.join('|');
   }
@@ -495,9 +498,11 @@ export default function createExternalRoot(rootElement) {
           if (parts.length > 1) log(`Total: ${allRecords.length} row(s) across ${usedSheets.size} sheet(s).`, 'g-info');
 
           // Update matching (only if the whole selection supports it).
+          const strategies0 = parts[0].matchStrategies || [];
           const wantUpdate = !!currentExport;
-          const updateMode = wantUpdate && groupSupportsUpdate;
+          const updateMode = wantUpdate && groupSupportsUpdate && strategies0.length > 0;
           if (wantUpdate && !groupSupportsUpdate) log('This category is create-only — the Content Hub export is ignored.', 'g-skip');
+          else if (wantUpdate && strategies0.length === 0) log('This category updates by id/identifier already in your file — the Content Hub export is not used for matching.', 'g-skip');
           let outputRecords = allRecords;
           if (updateMode) {
             const strategies = parts[0].matchStrategies;
