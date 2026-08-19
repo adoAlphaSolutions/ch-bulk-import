@@ -153,7 +153,9 @@ const CATEGORY_CONFIGS = {
     fieldMap: {
       'manufacturer': 'TB.PCM.Product.Manufacturer', 'brand': 'TB.PCM.Brand', 'style/collection name': 'TB.PCM.FamilyName',
       'door material': 'TB.PCM.CabinetWoodType', 'door style': 'TB.PCM.Style', 'color': 'Color', 'color family': 'TB.PCM.CabinetColorFamily',
-      'finish': 'TB.PCM.CabinetFinish', 'framed or frameless': 'TB.PCM.CabinetFramedFrameless', 'door construction type': 'TB.PCM.CabinetDoorConstructionType',
+      'finish': 'TB.PCM.CabinetFinish', 'framed or frameless': 'TB.PCM.CabinetFramedFrameless',
+      'door construction type (full overlay, partial overlay, inset)': 'TB.PCM.CabinetDoorConstructionType',
+      'door construction type': 'TB.PCM.CabinetDoorConstructionType',
       'drawer style': 'TB.PCM.CabinetDrawerStyle', 'product description': 'TB.PCM.ProductDescription', 'divisions selected': 'TB.PCM.DivisionSelected',
       'product name': 'TB.PCM.ProductName', 'mfn sku': 'TB.PCM.Product.SKU', 'toll sku': 'TB.PCM.TollSKU'
     },
