@@ -55,10 +55,11 @@ const FLOORING_FIELDMAP = {
   'color family': 'TB.PCM.FlooringColorFamily', 'color variation': 'TB.PCM.ColorVariation', 'species': 'TB.PCM.FlooringSpecies',
   'surface texture/visual': 'TB.PCM.SurfaceTextureVisual', 'finish/coating': 'TB.PCM.FinishCoating', 'wear layer (mil)': 'TB.PCM.FlooringWearLayer',
   'thickness': 'TB.PCM.FlooringThickness', 'width (in)': 'TB.PCM.FlooringWidth', 'length (in)': 'TB.PCM.FlooringLength',
-  'product description': 'TB.PCM.ProductDescription', 'divisions selected': 'TB.PCM.DivisionSelected'
+  'product description': 'TB.PCM.ProductDescription', 'divisions selected': 'TB.PCM.DivisionSelected',
+  'special features': 'TB.PCM.SpecialFeatures'
 };
 const FLOORING_OPTS = ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FlooringColorFamily', 'TB.PCM.ColorVariation', 'TB.PCM.FlooringSpecies', 'TB.PCM.SurfaceTextureVisual', 'TB.PCM.DivisionSelected'];
-const FLOORING_OUT = ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.E1ItemNumber', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'TB.PCM.Flooring.TollStyleNumber', 'Color', 'TB.PCM.Product.ColorNumber', 'TB.PCM.FlooringManufacturerFamilyName', 'TB.PCM.FlooringManufacturerStyleNumber', 'TB.PCM.FlooringManufacturerColorName', 'TB.PCM.FlooringManufacturerColorNumber', 'TB.PCM.FlooringColorFamily', 'TB.PCM.ColorVariation', 'TB.PCM.FlooringSpecies', 'TB.PCM.SurfaceTextureVisual', 'TB.PCM.FinishCoating', 'TB.PCM.FlooringWearLayer', 'TB.PCM.FlooringThickness', 'TB.PCM.FlooringWidth', 'TB.PCM.FlooringLength', 'TB.PCM.ProductDescription', 'TB.PCM.DivisionSelected'];
+const FLOORING_OUT = ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.E1ItemNumber', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'TB.PCM.Flooring.TollStyleNumber', 'Color', 'TB.PCM.Product.ColorNumber', 'TB.PCM.FlooringManufacturerFamilyName', 'TB.PCM.FlooringManufacturerStyleNumber', 'TB.PCM.FlooringManufacturerColorName', 'TB.PCM.FlooringManufacturerColorNumber', 'TB.PCM.FlooringColorFamily', 'TB.PCM.ColorVariation', 'TB.PCM.FlooringSpecies', 'TB.PCM.SurfaceTextureVisual', 'TB.PCM.FinishCoating', 'TB.PCM.FlooringWearLayer', 'TB.PCM.FlooringThickness', 'TB.PCM.FlooringWidth', 'TB.PCM.FlooringLength', 'TB.PCM.ProductDescription', 'TB.PCM.SpecialFeatures', 'TB.PCM.DivisionSelected'];
 const FLOORING_MATCH = [['TB.PCM.E1ItemNumber', 'Color'], ['TB.PCM.Product.SKU'], ['TB.PCM.FlooringManufacturerStyleNumber'], ['TB.PCM.Flooring.TollStyleNumber'], ['TB.PCM.FamilyName', 'Color']];
 function flooringCfg(label, sheetName, categoryValue) {
   return {
@@ -79,6 +80,7 @@ const CATEGORY_CONFIGS = {
       'color': 'Color', 'color family': 'TB.PCM.TileColorFamily', 'look/style': 'TB.PCM.TileStyle',
       'shape': 'TB.PCM.TileSize', 'size': 'TB.PCM.Size', 'material': 'TB.PCM.TileMaterial', 'finish': 'TB.PCM.TileFinish',
       'unit of measure': 'TB.PCM.Product.TileUnitOfMeasure', 'thickness (in)': 'TB.PCM.Product.TileThickness',
+      'special features': 'TB.PCM.SpecialFeatures',
       'product description': 'TB.PCM.ProductDescription'
     },
     itemCols: [
@@ -90,7 +92,7 @@ const CATEGORY_CONFIGS = {
     ],
     specialFeatures: null,
     optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.TileColorFamily', 'TB.PCM.TileStyle', 'TB.PCM.TileSize', 'TB.PCM.TileMaterial', 'TB.PCM.TileFinish', 'TB.PCM.Product.TileUnitOfMeasure'],
-    outCols: ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.E1ItemNumber', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'Color', 'TB.PCM.TileColorFamily', 'TB.PCM.TileStyle', 'TB.PCM.TileSize', 'TB.PCM.Size', 'TB.PCM.TileMaterial', 'TB.PCM.TileFinish', 'TB.PCM.Product.TileUnitOfMeasure', 'TB.PCM.Product.TileThickness', 'TB.PCM.ProductDescription', 'TB.PCM.AreaOfApplication'],
+    outCols: ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.E1ItemNumber', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'Color', 'TB.PCM.TileColorFamily', 'TB.PCM.TileStyle', 'TB.PCM.TileSize', 'TB.PCM.Size', 'TB.PCM.TileMaterial', 'TB.PCM.TileFinish', 'TB.PCM.Product.TileUnitOfMeasure', 'TB.PCM.Product.TileThickness', 'TB.PCM.ProductDescription', 'TB.PCM.SpecialFeatures', 'TB.PCM.AreaOfApplication'],
     requiredFields: ['TB.PCM.ProductName', 'TB.PCM.Category', 'TB.PCM.Product.Manufacturer', 'Color', 'TB.PCM.Product.SKU'],
     fallbacks: { nameFrom: ['description 1', 'description 2'], skuFromItems: ['backsplash item #', 'floor item #', 'shower floor item #', 'wall item #', 'listello item #'] }
   },
@@ -109,7 +111,7 @@ const CATEGORY_CONFIGS = {
       'style': 'TB.PCM.CarpetFlooringStyle', 'pattern size, if applicable': 'TB.PCM.CarpetFlooringCarpetPatternSize',
       'pattern size': 'TB.PCM.CarpetFlooringCarpetPatternSize',
       'construction': 'TB.PCM.CarpetFlooringConstruction', 'product description': 'TB.PCM.ProductDescription',
-      'thickness': 'TB.PCM.FlooringThickness'
+      'thickness': 'TB.PCM.FlooringThickness', 'special features': 'TB.PCM.SpecialFeatures'
     },
     itemCols: null,
     specialFeatures: {
@@ -122,7 +124,7 @@ const CATEGORY_CONFIGS = {
       ]
     },
     optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.CarpetFlooringColorFamily', 'TB.PCM.CarpetFlooringMaterial', 'TB.PCM.CarpetFlooringStyle', 'TB.PCM.CarpetFlooringConstruction'],
-    outCols: ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.E1ItemNumber', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'TB.PCM.Flooring.TollStyleNumber', 'Color', 'TB.PCM.Product.ColorNumber', 'TB.PCM.FlooringManufacturerFamilyName', 'TB.PCM.FlooringManufacturerStyleNumber', 'TB.PCM.FlooringManufacturerColorName', 'TB.PCM.FlooringManufacturerColorNumber', 'TB.PCM.CarpetFlooringColorFamily', 'TB.PCM.CarpetFlooringMaterial', 'TB.PCM.CarpetFlooringStyle', 'TB.PCM.CarpetFlooringCarpetPatternSize', 'TB.PCM.CarpetFlooringConstruction', 'TB.PCM.FlooringThickness', 'TB.PCM.ProductDescription', 'TB.PCM.CarpetFlooringSpecialFeatures'],
+    outCols: ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.E1ItemNumber', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'TB.PCM.Flooring.TollStyleNumber', 'Color', 'TB.PCM.Product.ColorNumber', 'TB.PCM.FlooringManufacturerFamilyName', 'TB.PCM.FlooringManufacturerStyleNumber', 'TB.PCM.FlooringManufacturerColorName', 'TB.PCM.FlooringManufacturerColorNumber', 'TB.PCM.CarpetFlooringColorFamily', 'TB.PCM.CarpetFlooringMaterial', 'TB.PCM.CarpetFlooringStyle', 'TB.PCM.CarpetFlooringCarpetPatternSize', 'TB.PCM.CarpetFlooringConstruction', 'TB.PCM.FlooringThickness', 'TB.PCM.ProductDescription', 'TB.PCM.CarpetFlooringSpecialFeatures', 'TB.PCM.SpecialFeatures'],
     requiredFields: ['TB.PCM.Category', 'TB.PCM.Product.Manufacturer', 'Color', 'TB.PCM.E1ItemNumber'],
     fallbacks: null
   },
@@ -135,13 +137,14 @@ const CATEGORY_CONFIGS = {
       'manufacturer': 'TB.PCM.Product.Manufacturer', 'brand': 'TB.PCM.Brand', 'thickness': 'TB.PCM.Countertops.Thickness',
       'color': 'Color', 'color family': 'TB.PCM.CountertopsColorFamily', 'material': 'TB.PCM.CountertopsMaterial',
       'look': 'TB.PCM.Countertops.Look', 'finish': 'TB.PCM.CountertopsFinish', 'product description': 'TB.PCM.ProductDescription',
+      'special features': 'TB.PCM.SpecialFeatures',
       'area of application': 'TB.PCM.AreaOfApplication', 'selected division': 'TB.PCM.DivisionSelected'
     },
     // Item# columns concatenate (comma-joined) into TB.PCM.E1ItemNumber; no AreaOfApplication.
     itemCols: [{ label: 'countertop item #' }, { label: 'wall tile item #' }, { label: 'backsplash item #' }],
     specialFeatures: null,
     optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.CountertopsColorFamily', 'TB.PCM.CountertopsMaterial', 'TB.PCM.Countertops.Look', 'TB.PCM.CountertopsFinish', 'TB.PCM.AreaOfApplication', 'TB.PCM.DivisionSelected'],
-    outCols: ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.E1ItemNumber', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.Countertops.Thickness', 'Color', 'TB.PCM.ColorFamily', 'TB.PCM.CountertopsColorFamily', 'TB.PCM.CountertopsMaterial', 'TB.PCM.Countertops.Look', 'TB.PCM.CountertopsFinish', 'TB.PCM.ProductDescription', 'TB.PCM.AreaOfApplication', 'TB.PCM.DivisionSelected'],
+    outCols: ['id', 'identifier', 'TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.E1ItemNumber', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.Countertops.Thickness', 'Color', 'TB.PCM.ColorFamily', 'TB.PCM.CountertopsColorFamily', 'TB.PCM.CountertopsMaterial', 'TB.PCM.Countertops.Look', 'TB.PCM.CountertopsFinish', 'TB.PCM.ProductDescription', 'TB.PCM.SpecialFeatures', 'TB.PCM.AreaOfApplication', 'TB.PCM.DivisionSelected'],
     requiredFields: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.Manufacturer', 'Color', 'TB.PCM.Product.SKU'],
     fallbacks: null
   },
@@ -157,11 +160,12 @@ const CATEGORY_CONFIGS = {
       'door construction type (full overlay, partial overlay, inset)': 'TB.PCM.CabinetDoorConstructionType',
       'door construction type': 'TB.PCM.CabinetDoorConstructionType',
       'drawer style': 'TB.PCM.CabinetDrawerStyle', 'product description': 'TB.PCM.ProductDescription', 'divisions selected': 'TB.PCM.DivisionSelected',
+      'special features': 'TB.PCM.SpecialFeatures',
       'product name': 'TB.PCM.ProductName', 'mfn sku': 'TB.PCM.Product.SKU', 'toll sku': 'TB.PCM.TollSKU'
     },
     itemCols: null, specialFeatures: null,
     optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.CabinetWoodType', 'TB.PCM.CabinetColorFamily', 'TB.PCM.CabinetFinish', 'TB.PCM.DivisionSelected'],
-    outCols: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'Color', 'TB.PCM.ProductDescription', 'TB.PCM.CabinetWoodType', 'TB.PCM.Style', 'TB.PCM.CabinetColorFamily', 'TB.PCM.CabinetFinish', 'TB.PCM.CabinetFramedFrameless', 'TB.PCM.CabinetDoorConstructionType', 'TB.PCM.CabinetDrawerStyle', 'TB.PCM.DivisionSelected'],
+    outCols: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'Color', 'TB.PCM.ProductDescription', 'TB.PCM.CabinetWoodType', 'TB.PCM.Style', 'TB.PCM.CabinetColorFamily', 'TB.PCM.CabinetFinish', 'TB.PCM.CabinetFramedFrameless', 'TB.PCM.CabinetDoorConstructionType', 'TB.PCM.CabinetDrawerStyle', 'TB.PCM.SpecialFeatures', 'TB.PCM.DivisionSelected'],
     requiredFields: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.Manufacturer'],
     fallbacks: null
   },
@@ -169,12 +173,14 @@ const CATEGORY_CONFIGS = {
     label: 'Cabinets — Hardware', sheetName: 'Cabinet Hardware', sheetMatch: ['hardware'], categoryValue: 'TB.PCM.Category.CabinetHardware', supportsUpdate: false, matchStrategies: [],
     fieldMap: {
       'vendor sku': 'TB.PCM.Product.SKU', 'manufacturer': 'TB.PCM.Product.Manufacturer', 'brand': 'TB.PCM.Brand', 'style name': 'TB.PCM.FamilyName',
-      'hardware style': 'TB.PCM.CabinetHardwareType', 'finish': 'Color', 'hardware color family': 'TB.PCM.HardwareColorFamily', 'size': 'TB.PCM.Size',
+      'hardware style': 'TB.PCM.CabinetHardwareType', 'hardware shape': 'TB.PCM.Cabinets.HardwareShape',
+      'finish': 'Color', 'hardware color family': 'TB.PCM.HardwareColorFamily', 'size': 'TB.PCM.Size',
+      'special features': 'TB.PCM.SpecialFeatures',
       'product description': 'TB.PCM.ProductDescription', 'product name': 'TB.PCM.ProductName', 'toll sku': 'TB.PCM.TollSKU', 'divisions selected': 'TB.PCM.DivisionSelected'
     },
     itemCols: null, specialFeatures: null,
-    optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.CabinetHardwareType', 'TB.PCM.DivisionSelected'],
-    outCols: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'TB.PCM.CabinetHardwareType', 'Color', 'TB.PCM.HardwareColorFamily', 'TB.PCM.Size', 'TB.PCM.ProductDescription', 'TB.PCM.DivisionSelected'],
+    optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.CabinetHardwareType', 'TB.PCM.Cabinets.HardwareShape', 'TB.PCM.DivisionSelected'],
+    outCols: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'TB.PCM.CabinetHardwareType', 'TB.PCM.Cabinets.HardwareShape', 'Color', 'TB.PCM.HardwareColorFamily', 'TB.PCM.Size', 'TB.PCM.ProductDescription', 'TB.PCM.SpecialFeatures', 'TB.PCM.DivisionSelected'],
     requiredFields: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.Manufacturer'],
     fallbacks: null
   },
@@ -182,12 +188,14 @@ const CATEGORY_CONFIGS = {
     label: 'Cabinets — Enhancements', sheetName: 'Cabinet Enhancements', sheetMatch: ['enhance'], categoryValue: 'TB.PCM.Category.CabinetEnhancements', supportsUpdate: false, matchStrategies: [],
     fieldMap: {
       'vendor sku': 'TB.PCM.Product.SKU', 'manufacturer': 'TB.PCM.Product.Manufacturer', 'enhancement name': 'TB.PCM.ProductName',
-      'enhancement category': 'TB.PCM.CabinetEnhancementsType', 'enhancement location': 'TB.PCM.CabinetEnchancementLocation', 'size': 'TB.PCM.Size',
+      'size': 'TB.PCM.Size', 'special features': 'TB.PCM.SpecialFeatures',
+      // ADO 86463: TB.PCM.CabinetEnhancementsType and TB.PCM.CabinetEnchancementLocation were DELETED
+      // (enhancements are no longer maintained at SKU level) — removed here.
       'description': 'TB.PCM.ProductDescription', 'toll sku': 'TB.PCM.TollSKU', 'divisions selected': 'TB.PCM.DivisionSelected'
     },
     itemCols: null, specialFeatures: null,
-    optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.CabinetEnhancementsType', 'TB.PCM.DivisionSelected'],
-    outCols: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.CabinetEnhancementsType', 'TB.PCM.CabinetEnchancementLocation', 'TB.PCM.Size', 'TB.PCM.ProductDescription', 'TB.PCM.DivisionSelected'],
+    optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.DivisionSelected'],
+    outCols: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Size', 'TB.PCM.ProductDescription', 'TB.PCM.SpecialFeatures', 'TB.PCM.DivisionSelected'],
     requiredFields: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.Manufacturer'],
     fallbacks: null
   }
