@@ -1,3 +1,4 @@
+const BUILD_VERSION = 'v1.1 · 2026-09-14';   // bump on every change; shown in the footer
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -44,7 +45,10 @@ function sourceFor(field) { return FIELD_SOURCE[field] || field; }
 // Default Item Status stamped on NEW products (create mode) when the intake
 // leaves it blank. Change the value if your instance uses a different option.
 const ITEM_STATUS_FIELD = 'TB.PCM.Product.ItemStatus';
-const DEFAULT_ITEM_STATUS = 'Active';
+// Full option identifier (resolves cleanly, and passes through as the identifier
+// even if the option list can't be read live). Options on this instance:
+//   TB.PCM.Product.ItemStatus.Active / .Paused / .Retired
+const DEFAULT_ITEM_STATUS = 'TB.PCM.Product.ItemStatus.Active';
 
 const ID_LABELS = { 'id': 'id', 'content hub id': 'id', 'identifier': 'identifier', 'content hub identifier': 'identifier' };
 
@@ -229,6 +233,7 @@ const CSS = `
   .g-sel   { padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; }
   .g-log   { background: #1a202c; color: #e2e8f0; font-family: monospace; font-size: 12px; padding: 14px; border-radius: 6px; margin-top: 14px; max-height: 360px; overflow: auto; white-space: pre-wrap; display: none; }
   .g-ok { color: #68d391; } .g-skip { color: #cbd5e0; } .g-err { color: #fc8181; } .g-info { color: #90cdf4; }
+  .g-foot  { margin-top: 16px; font-size: 11px; color: #a0aec0; text-align: right; }
 `;
 
 const SHEETJS_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
@@ -406,6 +411,7 @@ export default function createExternalRoot(rootElement) {
           <span id="g-lookups" style="font-size:12px;color:#888"></span>
         </div>
         <div class="g-log" id="g-log"></div>
+        <div class="g-foot" id="g-foot">Product Import Generator · ${BUILD_VERSION}</div>
       `;
       rootElement.innerHTML = ''; rootElement.appendChild(style); rootElement.appendChild(wrap);
 
