@@ -41,6 +41,11 @@ const FIELD_SOURCE = {
 };
 function sourceFor(field) { return FIELD_SOURCE[field] || field; }
 
+// Default Item Status stamped on NEW products (create mode) when the intake
+// leaves it blank. Change the value if your instance uses a different option.
+const ITEM_STATUS_FIELD = 'TB.PCM.Product.ItemStatus';
+const DEFAULT_ITEM_STATUS = 'Active';
+
 const ID_LABELS = { 'id': 'id', 'content hub id': 'id', 'identifier': 'identifier', 'content hub identifier': 'identifier' };
 
 // ---- Flooring shared config (one sheet per sub-category in the workbook) ----
@@ -537,12 +542,16 @@ export default function createExternalRoot(rootElement) {
             if (!outputRecords.length) { log('Nothing to update.', 'g-err'); return; }
           }
 
-          // NEW records only: per-record fallbacks for ProductName/SKU.
+          // NEW records only: per-record fallbacks for ProductName/SKU, and a
+          // default Item Status so new products aren't created blank.
           if (!updateMode) {
             for (const r of outputRecords) {
               if (!String(r['TB.PCM.ProductName'] == null ? '' : r['TB.PCM.ProductName']).trim() && r.__fallbackName) r['TB.PCM.ProductName'] = r.__fallbackName;
               if (!String(r['TB.PCM.Product.SKU'] == null ? '' : r['TB.PCM.Product.SKU']).trim() && r.__fallbackSku) r['TB.PCM.Product.SKU'] = r.__fallbackSku;
+              if (!String(r[ITEM_STATUS_FIELD] == null ? '' : r[ITEM_STATUS_FIELD]).trim()) r[ITEM_STATUS_FIELD] = DEFAULT_ITEM_STATUS;
             }
+            if (!outColsOrder.includes(ITEM_STATUS_FIELD)) outColsOrder.push(ITEM_STATUS_FIELD);
+            optionFields.add(ITEM_STATUS_FIELD);   // resolve to its identifier if it's an option list
           }
 
           const used = new Set();
