@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v1.4 · 2026-09-16';   // export: select M.PCM.Product sheet by name
+const BUILD_VERSION = 'v1.5 · 2026-09-16';   // resolve all Cabinet dropdown fields to identifiers
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -173,7 +173,7 @@ const CATEGORY_CONFIGS = {
       'product name': 'TB.PCM.ProductName', 'mfn sku': 'TB.PCM.Product.SKU', 'toll sku': 'TB.PCM.TollSKU'
     },
     itemCols: null, specialFeatures: null,
-    optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.CabinetWoodType', 'TB.PCM.CabinetColorFamily', 'TB.PCM.CabinetFinish', 'TB.PCM.DivisionSelected'],
+    optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.CabinetWoodType', 'TB.PCM.Style', 'TB.PCM.CabinetColorFamily', 'TB.PCM.CabinetFinish', 'TB.PCM.CabinetFramedFrameless', 'TB.PCM.CabinetDoorConstructionType', 'TB.PCM.CabinetDrawerStyle', 'TB.PCM.DivisionSelected'],
     outCols: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'Color', 'TB.PCM.ProductDescription', 'TB.PCM.CabinetWoodType', 'TB.PCM.Style', 'TB.PCM.CabinetColorFamily', 'TB.PCM.CabinetFinish', 'TB.PCM.CabinetFramedFrameless', 'TB.PCM.CabinetDoorConstructionType', 'TB.PCM.CabinetDrawerStyle', 'TB.PCM.SpecialFeatures', 'TB.PCM.DivisionSelected'],
     requiredFields: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.Manufacturer'],
     fallbacks: null
@@ -188,7 +188,7 @@ const CATEGORY_CONFIGS = {
       'product description': 'TB.PCM.ProductDescription', 'product name': 'TB.PCM.ProductName', 'toll sku': 'TB.PCM.TollSKU', 'divisions selected': 'TB.PCM.DivisionSelected'
     },
     itemCols: null, specialFeatures: null,
-    optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.CabinetHardwareType', 'TB.PCM.Cabinets.HardwareShape', 'TB.PCM.DivisionSelected'],
+    optionListFields: ['TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.CabinetHardwareType', 'TB.PCM.Cabinets.HardwareShape', 'TB.PCM.HardwareColorFamily', 'TB.PCM.DivisionSelected'],
     outCols: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.SKU', 'TB.PCM.TollSKU', 'TB.PCM.Product.Manufacturer', 'TB.PCM.Brand', 'TB.PCM.FamilyName', 'TB.PCM.CabinetHardwareType', 'TB.PCM.Cabinets.HardwareShape', 'Color', 'TB.PCM.HardwareColorFamily', 'TB.PCM.Size', 'TB.PCM.ProductDescription', 'TB.PCM.SpecialFeatures', 'TB.PCM.DivisionSelected'],
     requiredFields: ['TB.PCM.Category', 'TB.PCM.ProductName', 'TB.PCM.Product.Manufacturer'],
     fallbacks: null
