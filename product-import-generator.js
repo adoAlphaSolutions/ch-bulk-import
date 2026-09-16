@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v1.1 · 2026-09-14';   // bump on every change; shown in the footer
+const BUILD_VERSION = 'v1.3 · 2026-09-16';   // tolerant option-list matching (punctuation/spacing)
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -248,7 +248,9 @@ function loadXLSX() {
   });
 }
 
-function norm(s) { return String(s == null ? '' : s).trim().toLowerCase().replace(/\s+/g, ' '); }
+// Normalize a header/label: trim, lowercase, collapse whitespace, and standardize
+// spacing around '#' so "Item#", "Item  #" and "Item #" all match "item #".
+function norm(s) { return String(s == null ? '' : s).trim().toLowerCase().replace(/\s+/g, ' ').replace(/\s*#/g, ' #').trim(); }
 
 function dsLabel(v, culture) {
   const L = v && (v.labels || v.Labels);
@@ -274,14 +276,23 @@ async function getSourcePairs(source, client, culture, log) {
   return fb;
 }
 
+// "loose" key: lowercase, drop everything but letters/digits, so
+// "E Stone / Piedrafina", "e-stone piedrafina" and "EStonePiedrafina" all collide.
+function looseKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+
 function buildLabelMap(pairs) {
   const m = new Map();
+  const add = (k, id) => {
+    const kk = String(k == null ? '' : k).trim().toLowerCase();
+    if (kk && !m.has(kk)) m.set(kk, id);
+    const lk = looseKey(kk);
+    if (lk && !m.has('~' + lk)) m.set('~' + lk, id);   // '~' namespaces the loose keys
+  };
   for (const [identifier, label] of pairs) {
     if (!identifier) continue;
-    m.set(identifier.toLowerCase(), identifier);
-    const last = identifier.split('.').pop();
-    if (last) m.set(last.toLowerCase(), identifier);
-    if (label) m.set(String(label).trim().toLowerCase(), identifier);
+    add(identifier, identifier);
+    add(identifier.split('.').pop(), identifier);   // last segment
+    if (label) add(label, identifier);
   }
   return m;
 }
@@ -292,8 +303,9 @@ function resolveField(value, map) {
   const tokens = raw.split(/[|,]/).map(t => t.trim()).filter(Boolean);
   const ids = [], bad = [];
   for (const tok of tokens) {
-    let id = map.get(tok.toLowerCase());
-    if (!id && tok.indexOf('.') >= 0) id = tok;
+    let id = map.get(tok.toLowerCase());               // exact label / identifier / last segment
+    if (!id) id = map.get('~' + looseKey(tok));         // punctuation/space-insensitive
+    if (!id && tok.indexOf('.') >= 0) id = tok;         // already an identifier
     if (id) ids.push(id); else bad.push(tok);
   }
   return { value: ids.join('|'), bad };
