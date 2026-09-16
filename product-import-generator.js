@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v1.3 · 2026-09-16';   // tolerant option-list matching (punctuation/spacing)
+const BUILD_VERSION = 'v1.4 · 2026-09-16';   // export: select M.PCM.Product sheet by name
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -540,7 +540,10 @@ export default function createExternalRoot(rootElement) {
           if (updateMode) {
             const strategies = parts[0].matchStrategies;
             const expWb = XLSX.read(await currentExport.arrayBuffer(), { type: 'array' });
-            const expAoa = XLSX.utils.sheet_to_json(expWb.Sheets[expWb.SheetNames[0]], { header: 1, defval: '', raw: false });
+            // Prefer the "M.PCM.Product" sheet (a CH export has many sheets); fall back to the first.
+            const expSheet = expWb.SheetNames.find(n => String(n).trim().toLowerCase() === SHEET_NAME.toLowerCase()) || expWb.SheetNames[0];
+            log(`Content Hub export — reading sheet "${expSheet}".`, 'g-info');
+            const expAoa = XLSX.utils.sheet_to_json(expWb.Sheets[expSheet], { header: 1, defval: '', raw: false });
             const { maps, error } = buildExportIndex(expAoa, strategies);
             if (error) { log(`✗ Content Hub export: ${error}`, 'g-err'); return; }
             log(`UPDATE mode — matching by: ${strategies.map(s => s.join('+')).join('  or  ')}`, 'g-info');
