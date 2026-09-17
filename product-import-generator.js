@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v1.6 · 2026-09-16';   // ItemStatus snapshot; Style is text (not option)
+const BUILD_VERSION = 'v1.8 · 2026-09-17';   // option fields never emit a label: blank + report instead
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -271,6 +271,27 @@ async function getSourcePairs(source, client, culture, log) {
       if (pairs.length) { liveCache[source] = pairs; return pairs; }
     } catch (e) { /* fall back */ }
   }
+  // Fallback 2: some option lists are backed by entities/taxonomy that
+  // dataSources.getAsync doesn't inline. Read the value entities directly.
+  try {
+    const host = (typeof location !== 'undefined' && location.origin) ? location.origin : '';
+    const q = `Definition.Name=='${String(source).replace(/'/g, "''")}'`;
+    const url = `${host}/api/entities/query?query=${encodeURIComponent(q)}&members=Label,Identifier&take=1000`;
+    const res = await fetch(url, { credentials: 'include', headers: { Accept: 'application/json' } });
+    if (res.ok) {
+      const items = ((await res.json()) || {}).items || [];
+      const pairs = [];
+      for (const it of items) {
+        const id = it.identifier || it.Identifier || (it.self && it.self.href ? it.self.href.split('/').pop() : null);
+        if (!id) continue;
+        let label = '';
+        const L = it.properties && (it.properties.Label || it.properties.label);
+        if (L != null) { if (typeof L === 'object') { const k = Object.keys(L); label = k.length ? String(L[k[0]]) : ''; } else label = String(L); }
+        pairs.push([String(id), label]);
+      }
+      if (pairs.length) { if (log) log(`  ${source}: ${pairs.length} value(s) via entity query`, 'g-info'); liveCache[source] = pairs; return pairs; }
+    }
+  } catch (e) { /* fall through to snapshot */ }
   const fb = DEFAULT_LOOKUPS[source] || [];
   liveCache[source] = fb;
   return fb;
@@ -586,17 +607,26 @@ export default function createExternalRoot(rootElement) {
             const pairs = await getSourcePairs(src, client, culture, log);
             meta[f] = { isOption: pairs.length > 0, map: buildLabelMap(pairs) };
             if (meta[f].isOption) log(`  ${f} → ${src}: ${pairs.length} options`, 'g-info');
-            else log(`  ${f}: no option list (${src}) — passed through as text`, 'g-skip');
+            else log(`  ${f}: option list not available (${src}) — values will be left BLANK (never written as label)`, 'g-err');
           }
           const unresolved = [];
           for (const r of outputRecords) {
             for (const f of Object.keys(r)) {
               if (f.startsWith('__')) continue;
-              if (meta[f] && meta[f].isOption) {
+              if (!meta[f]) continue;   // not a declared option field -> leave as-is (real text field)
+              if (meta[f].isOption) {
                 const res = resolveField(r[f], meta[f].map);
                 res.bad.forEach(b => unresolved.push({ row: r.__row, field: f, value: b }));
                 if (res.bad.length && updateMode) { const o = r.__export ? r.__export[f.toLowerCase()] : ''; r[f] = (o == null ? '' : o); }
                 else r[f] = res.value;
+              } else {
+                // Declared option list but the list couldn't be loaded — we can't
+                // map the label to an identifier, so BLANK it (writing the raw
+                // label would make Content Hub error) and report it as unresolved.
+                const v = String(r[f] == null ? '' : r[f]).trim();
+                if (v) unresolved.push({ row: r.__row, field: f, value: v });
+                if (updateMode) { const o = r.__export ? r.__export[f.toLowerCase()] : ''; r[f] = (o == null ? '' : o); }
+                else r[f] = '';
               }
             }
           }
