@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v1.9 · 2026-09-17';   // Reload button covers ALL option lists (diagnostic)
+const BUILD_VERSION = 'v2.0 · 2026-09-17';   // read option lists via client.optionLists (JS SDK)
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -262,9 +262,12 @@ function dsLabel(v, culture) {
 // Get one source's [[identifier, label]] live (cached), fall back to snapshot.
 async function getSourcePairs(source, client, culture, log) {
   if (liveCache[source]) return liveCache[source];
-  if (client && client.dataSources && typeof client.dataSources.getAsync === 'function') {
+  // The JS/Web SDK exposes option lists as client.optionLists (the .NET SDK uses
+  // dataSources) — support whichever this runtime provides.
+  const olClient = (client && client.optionLists) || (client && client.dataSources);
+  if (olClient && typeof olClient.getAsync === 'function') {
     try {
-      const ds = await client.dataSources.getAsync(source);
+      const ds = await olClient.getAsync(source);
       const values = (ds && (ds.values || ds.Values)) || [];
       const pairs = [];
       for (const v of values) { const id = v.identifier || v.Identifier; if (id) pairs.push([id, dsLabel(v, culture)]); }
