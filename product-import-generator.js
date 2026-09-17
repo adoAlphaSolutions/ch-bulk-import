@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v1.8 · 2026-09-17';   // option fields never emit a label: blank + report instead
+const BUILD_VERSION = 'v1.9 · 2026-09-17';   // Reload button covers ALL option lists (diagnostic)
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -673,14 +673,21 @@ export default function createExternalRoot(rootElement) {
         clearLog(); syncBtn.disabled = true;
         log('── RELOAD OPTION LISTS FROM CONTENT HUB ──', 'g-info');
         liveCache = {};
-        let total = 0;
-        for (const name of DATA_SOURCE_NAMES) {
+        // Every option-list source actually used across all categories (not a stale
+        // hard-coded list), so this doubles as a diagnostic of which lists CH returns.
+        const optFields = new Set();
+        Object.values(CATEGORY_CONFIGS).forEach(c => (c.optionListFields || []).forEach(f => optFields.add(f)));
+        optFields.add(ITEM_STATUS_FIELD);
+        const sources = Array.from(new Set(Array.from(optFields).map(sourceFor))).sort();
+        let total = 0, empty = 0;
+        for (const name of sources) {
           const pairs = await getSourcePairs(name, client, culture, log);
           total += pairs.length;
+          if (!pairs.length) empty++;
           log(`  ${name}: ${pairs.length} value(s)`, pairs.length ? 'g-ok' : 'g-err');
         }
         setLookupsStatus('— reloaded live from Content Hub.');
-        log(`✓ Loaded ${total} value(s) across ${DATA_SOURCE_NAMES.length} data source(s). (Divisions & Category use the snapshot.)`, 'g-ok');
+        log(`✓ Loaded ${total} value(s) across ${sources.length} source(s)${empty ? ` — ${empty} returned EMPTY (see red lines)` : ''}. (Divisions & Category use the snapshot.)`, empty ? 'g-err' : 'g-ok');
         syncBtn.disabled = false;
       });
     },
