@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v2.0 · 2026-09-17';   // read option lists via client.optionLists (JS SDK)
+const BUILD_VERSION = 'v2.1 · 2026-09-17';   // global required (Mfr/Name/Color) + UI defaults + Color-header aliases
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -49,6 +49,15 @@ const ITEM_STATUS_FIELD = 'TB.PCM.Product.ItemStatus';
 // even if the option list can't be read live). Options on this instance:
 //   TB.PCM.Product.ItemStatus.Active / .Paused / .Retired
 const DEFAULT_ITEM_STATUS = 'TB.PCM.Product.ItemStatus.Active';
+
+// Fields required on EVERY new product, regardless of category. If any is still
+// blank after the UI defaults are applied, the run reports it (in addition to
+// each category's own required list).
+const GLOBAL_REQUIRED = ['TB.PCM.Product.Manufacturer', 'TB.PCM.ProductName', 'Color'];
+
+// Alternate intake header spellings that all mean the plain "Color" column.
+// Normalized (lowercase, single-spaced) — e.g. header "Finish/Color" -> "finish/color".
+const COLOR_ALIASES = ['finish/color', 'finish / color', 'color/finish', 'color / finish', 'colour', 'color/finish name'];
 
 const ID_LABELS = { 'id': 'id', 'content hub id': 'id', 'identifier': 'identifier', 'content hub identifier': 'identifier' };
 
@@ -231,6 +240,8 @@ const CSS = `
   .g-go    { background: #2f855a; color: #fff; }
   .g-sync  { background: #6b46c1; color: #fff; }
   .g-sel   { padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; }
+  .g-in    { padding: 6px 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; width: 150px; }
+  .g-deflbl{ font-size: 13px; color: #555; }
   .g-log   { background: #1a202c; color: #e2e8f0; font-family: monospace; font-size: 12px; padding: 14px; border-radius: 6px; margin-top: 14px; max-height: 360px; overflow: auto; white-space: pre-wrap; display: none; }
   .g-ok { color: #68d391; } .g-skip { color: #cbd5e0; } .g-err { color: #fc8181; } .g-info { color: #90cdf4; }
   .g-foot  { margin-top: 16px; font-size: 11px; color: #a0aec0; text-align: right; }
@@ -378,6 +389,11 @@ function buildRecord(cfg, rowObj) {
   for (const [lbl, chf] of Object.entries(cfg.fieldMap)) {
     const v = (rowObj[lbl] || '').trim(); if (v) rec[chf] = v;
   }
+  // If the plain "Color" column wasn't filled by the field map, accept a known
+  // alias header (e.g. "Finish/Color") so the value isn't lost.
+  if (!String(rec['Color'] == null ? '' : rec['Color']).trim()) {
+    for (const a of COLOR_ALIASES) { const v = (rowObj[a] || '').trim(); if (v) { rec['Color'] = v; break; } }
+  }
   if (cfg.fallbacks) {
     if (cfg.fallbacks.nameFrom) {
       let n = ''; for (const l of cfg.fallbacks.nameFrom) { const v = (rowObj[l] || '').trim(); if (v) { n = v; break; } }
@@ -438,6 +454,12 @@ export default function createExternalRoot(rootElement) {
         <div class="g-drop" id="g-drop2">🔁 <b>2. Content Hub export</b> (optional — for updates) — drop the export with id/identifier</div>
         <input type="file" id="g-file2" accept=".xlsx,.xls,.csv" style="display:none" />
         <div class="g-row">
+          <span class="g-deflbl">Fill blanks with &nbsp;→</span>
+          <input type="text" id="g-def-mfr"   class="g-in" placeholder="Manufacturer (default)" />
+          <input type="text" id="g-def-name"  class="g-in" placeholder="Product Name (default)" />
+          <input type="text" id="g-def-color" class="g-in" placeholder="Color (default)" />
+        </div>
+        <div class="g-row">
           <button class="g-btn g-dry" id="g-dry" disabled>🔍 Validate (dry run)</button>
           <button class="g-btn g-go"  id="g-go"  disabled>⬇ Generate import file</button>
           <span id="g-status" style="font-size:13px;color:#555"></span>
@@ -457,6 +479,7 @@ export default function createExternalRoot(rootElement) {
       const dryBtn = wrap.querySelector('#g-dry'), goBtn = wrap.querySelector('#g-go');
       const syncBtn = wrap.querySelector('#g-sync'), lookupsStatus = wrap.querySelector('#g-lookups');
       const status = wrap.querySelector('#g-status'), logEl = wrap.querySelector('#g-log');
+      const defMfr = wrap.querySelector('#g-def-mfr'), defName = wrap.querySelector('#g-def-name'), defColor = wrap.querySelector('#g-def-color');
       let currentFile = null, currentExport = null;
 
       catSel.innerHTML = DROPDOWN.map(d => `<option value="${d.key}">${d.label}</option>`).join('');
@@ -530,6 +553,7 @@ export default function createExternalRoot(rootElement) {
             const rawHeaders = aoa[0].map(h => String(h == null ? '' : h).trim());
             const normHeaders = rawHeaders.map(norm);
             const known = new Set([...Object.keys(part.fieldMap), ...Object.keys(ID_LABELS)]);
+            COLOR_ALIASES.forEach(a => known.add(a));
             if (part.itemCols) part.itemCols.forEach(i => known.add(i.label));
             if (part.specialFeatures) part.specialFeatures.flags.forEach(f => known.add(f.label));
             if (part.fallbacks && part.fallbacks.nameFrom) part.fallbacks.nameFrom.forEach(l => known.add(l));
@@ -599,6 +623,27 @@ export default function createExternalRoot(rootElement) {
             optionFields.add(ITEM_STATUS_FIELD);   // resolve to its identifier if it's an option list
           }
 
+          // UI defaults — fill empty Manufacturer / Product Name / Color on EVERY
+          // output row (both create and update). Applied before option-list
+          // resolution so a default Manufacturer label still resolves to its id.
+          const uiDefaults = {
+            'TB.PCM.Product.Manufacturer': String(defMfr.value || '').trim(),
+            'TB.PCM.ProductName': String(defName.value || '').trim(),
+            'Color': String(defColor.value || '').trim()
+          };
+          const activeDefaults = Object.entries(uiDefaults).filter(([, v]) => v);
+          if (activeDefaults.length) {
+            let filled = 0;
+            for (const r of outputRecords) {
+              for (const [f, dv] of activeDefaults) {
+                if (!String(r[f] == null ? '' : r[f]).trim()) { r[f] = dv; filled++; }
+              }
+            }
+            log(`Defaults applied to ${filled} blank cell(s): ${activeDefaults.map(([f, v]) => `${f.split('.').pop()}="${v}"`).join(', ')}`, 'g-info');
+            // Make sure the defaulted columns are emitted even if they were empty everywhere.
+            activeDefaults.forEach(([f]) => { if (!outColsOrder.includes(f)) outColsOrder.push(f); });
+          }
+
           const used = new Set();
           outputRecords.forEach(r => Object.keys(r).forEach(k => { if (!k.startsWith('__')) used.add(k); }));
 
@@ -644,7 +689,9 @@ export default function createExternalRoot(rootElement) {
             for (const r of outputRecords) {
               // Rows that already carry id/identifier are updates — existing values satisfy required fields.
               if (String(r['id'] == null ? '' : r['id']).trim() || String(r['identifier'] == null ? '' : r['identifier']).trim()) continue;
-              const m = r.__cfg.requiredFields.filter(f => !String(r[f] == null ? '' : r[f]).trim());
+              // Union of this category's required fields + the global three.
+              const reqSet = new Set([...(r.__cfg.requiredFields || []), ...GLOBAL_REQUIRED]);
+              const m = [...reqSet].filter(f => !String(r[f] == null ? '' : r[f]).trim());
               if (m.length) missing.push({ row: r.__row, m });
             }
             if (missing.length) { log(`⚠ Required field(s) missing on ${missing.length} new record(s):`, 'g-err'); missing.slice(0, 100).forEach(x => log(`   Row ${x.row}: ${x.m.join(', ')}`, 'g-err')); }
