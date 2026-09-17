@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v2.1 · 2026-09-17';   // global required (Mfr/Name/Color) + UI defaults + Color-header aliases
+const BUILD_VERSION = 'v2.2 · 2026-09-17';   // Manufacturer default is an option-list dropdown (label shown, id stored)
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -455,7 +455,7 @@ export default function createExternalRoot(rootElement) {
         <input type="file" id="g-file2" accept=".xlsx,.xls,.csv" style="display:none" />
         <div class="g-row">
           <span class="g-deflbl">Fill blanks with &nbsp;→</span>
-          <input type="text" id="g-def-mfr"   class="g-in" placeholder="Manufacturer (default)" />
+          <select id="g-def-mfr" class="g-sel"><option value="">Manufacturer (default)…</option></select>
           <input type="text" id="g-def-name"  class="g-in" placeholder="Product Name (default)" />
           <input type="text" id="g-def-color" class="g-in" placeholder="Color (default)" />
         </div>
@@ -495,6 +495,22 @@ export default function createExternalRoot(rootElement) {
       const lookupCount = () => Object.values(liveCache).reduce((a, v) => a + (v ? v.length : 0), 0);
       const setLookupsStatus = note => { lookupsStatus.textContent = `Option lists: ${lookupCount()} values ${note}`; };
       setLookupsStatus('— read live from Content Hub on first run.');
+
+      // Populate the Manufacturer default dropdown from the option list: option
+      // TEXT is the label, option VALUE is the identifier (so a pick sets the id
+      // directly). Reads live via getSourcePairs, falling back to the snapshot.
+      async function populateMfrDefault() {
+        try {
+          const keep = defMfr.value;
+          const pairs = await getSourcePairs('TB.PCM.Manufacturer', client, culture, null);
+          const sorted = pairs.slice().sort((a, b) => String(a[1] || a[0]).localeCompare(String(b[1] || b[0])));
+          let html = '<option value="">Manufacturer (default)…</option>';
+          for (const [id, label] of sorted) html += `<option value="${id}">${(label || id).replace(/</g, '&lt;')}</option>`;
+          defMfr.innerHTML = html;
+          if (keep) defMfr.value = keep;
+        } catch (e) { /* leave the placeholder-only dropdown */ }
+      }
+      populateMfrDefault();
 
       function log(msg, cls) {
         logEl.style.display = 'block';
@@ -738,6 +754,7 @@ export default function createExternalRoot(rootElement) {
         }
         setLookupsStatus('— reloaded live from Content Hub.');
         log(`✓ Loaded ${total} value(s) across ${sources.length} source(s)${empty ? ` — ${empty} returned EMPTY (see red lines)` : ''}. (Divisions & Category use the snapshot.)`, empty ? 'g-err' : 'g-ok');
+        await populateMfrDefault();   // refresh the default dropdown with the freshly-loaded labels
         syncBtn.disabled = false;
       });
     },
