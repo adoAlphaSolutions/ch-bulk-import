@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v2.5 · 2026-09-21';   // Mismatches file now also emitted on the 0-match path (Validate + Generate)
+const BUILD_VERSION = 'v2.6 · 2026-09-21';   // Mismatches shown as an on-screen tab + "Download report" button (also embedded in Generate)
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -242,9 +242,21 @@ const CSS = `
   .g-sel   { padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; }
   .g-in    { padding: 6px 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; width: 150px; }
   .g-deflbl{ font-size: 13px; color: #555; }
-  .g-log   { background: #1a202c; color: #e2e8f0; font-family: monospace; font-size: 12px; padding: 14px; border-radius: 6px; margin-top: 14px; max-height: 360px; overflow: auto; white-space: pre-wrap; display: none; }
+  .g-log   { background: #1a202c; color: #e2e8f0; font-family: monospace; font-size: 12px; padding: 14px; border-radius: 6px; max-height: 360px; overflow: auto; white-space: pre-wrap; display: none; }
   .g-ok { color: #68d391; } .g-skip { color: #cbd5e0; } .g-err { color: #fc8181; } .g-info { color: #90cdf4; }
   .g-foot  { margin-top: 16px; font-size: 11px; color: #a0aec0; text-align: right; }
+  /* results tabs */
+  .g-tabs  { display: flex; gap: 6px; align-items: center; margin-top: 14px; border-bottom: 1px solid #e2e8f0; }
+  .g-tab   { padding: 7px 14px; border: 1px solid #e2e8f0; border-bottom: none; background: #f7fafc; color: #4a5568; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 13px; }
+  .g-tab.g-tab-on { background: #fff; color: #1a202c; font-weight: 600; box-shadow: 0 1px 0 #fff; }
+  .g-tab-dl { margin-left: auto; }
+  .g-mm    { display: none; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 6px 6px; max-height: 380px; overflow: auto; }
+  .g-mm table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  .g-mm th, .g-mm td { border: 1px solid #edf2f7; padding: 5px 8px; text-align: left; white-space: nowrap; vertical-align: top; }
+  .g-mm th { position: sticky; top: 0; background: #f7fafc; color: #2d3748; font-weight: 600; z-index: 1; }
+  .g-mm tr:nth-child(even) td { background: #fbfdff; }
+  .g-mm .g-diff { color: #c53030; font-weight: 600; }
+  .g-mm .g-new  { color: #718096; }
 `;
 
 const SHEETJS_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
@@ -541,7 +553,13 @@ export default function createExternalRoot(rootElement) {
           <button class="g-btn g-sync" id="g-sync">🔄 Reload option lists from Content Hub</button>
           <span id="g-lookups" style="font-size:12px;color:#888"></span>
         </div>
+        <div class="g-tabs" id="g-tabs" style="display:none">
+          <button class="g-tab g-tab-on" id="g-tab-log">Log</button>
+          <button class="g-tab" id="g-tab-mm" style="display:none">Mismatches (<span id="g-mm-count">0</span>)</button>
+          <button class="g-btn g-dry g-tab-dl" id="g-mm-dl" style="display:none">⬇ Download mismatches report</button>
+        </div>
         <div class="g-log" id="g-log"></div>
+        <div class="g-mm" id="g-mm"></div>
         <div class="g-foot" id="g-foot">Product Import Generator · ${BUILD_VERSION}</div>
       `;
       rootElement.innerHTML = ''; rootElement.appendChild(style); rootElement.appendChild(wrap);
@@ -553,7 +571,9 @@ export default function createExternalRoot(rootElement) {
       const syncBtn = wrap.querySelector('#g-sync'), lookupsStatus = wrap.querySelector('#g-lookups');
       const status = wrap.querySelector('#g-status'), logEl = wrap.querySelector('#g-log');
       const defMfr = wrap.querySelector('#g-def-mfr'), defName = wrap.querySelector('#g-def-name'), defColor = wrap.querySelector('#g-def-color');
-      let currentFile = null, currentExport = null;
+      const tabsBar = wrap.querySelector('#g-tabs'), tabLog = wrap.querySelector('#g-tab-log'), tabMm = wrap.querySelector('#g-tab-mm');
+      const mmPanel = wrap.querySelector('#g-mm'), mmCount = wrap.querySelector('#g-mm-count'), mmDlBtn = wrap.querySelector('#g-mm-dl');
+      let currentFile = null, currentExport = null, lastMismatchAOA = null, lastMismatchLabel = '';
 
       catSel.innerHTML = DROPDOWN.map(d => `<option value="${d.key}">${d.label}</option>`).join('');
       function partsForSelection() { const item = DROPDOWN.find(d => d.key === catSel.value) || DROPDOWN[0]; return { item, parts: item.group.map(k => CATEGORY_CONFIGS[k]) }; }
@@ -585,12 +605,69 @@ export default function createExternalRoot(rootElement) {
       }
       populateMfrDefault();
 
+      let activeTab = 'log';
       function log(msg, cls) {
-        logEl.style.display = 'block';
+        tabsBar.style.display = 'flex';
         const line = document.createElement('div'); if (cls) line.className = cls;
-        line.textContent = msg; logEl.appendChild(line); logEl.scrollTop = logEl.scrollHeight;
+        line.textContent = msg; logEl.appendChild(line);
+        if (activeTab === 'log') logEl.style.display = 'block';
+        logEl.scrollTop = logEl.scrollHeight;
       }
-      function clearLog() { logEl.innerHTML = ''; logEl.style.display = 'none'; }
+      function clearLog() {
+        logEl.innerHTML = ''; logEl.style.display = 'none';
+        tabsBar.style.display = 'none'; clearMismatches();
+      }
+
+      // ---- Results tabs (Log / Mismatches) ----
+      function showTab(which) {
+        activeTab = which;
+        const onMm = which === 'mm';
+        logEl.style.display = onMm ? 'none' : (logEl.childElementCount ? 'block' : 'none');
+        mmPanel.style.display = onMm ? 'block' : 'none';
+        tabLog.classList.toggle('g-tab-on', !onMm);
+        tabMm.classList.toggle('g-tab-on', onMm);
+      }
+      tabLog.addEventListener('click', () => showTab('log'));
+      tabMm.addEventListener('click', () => showTab('mm'));
+
+      function clearMismatches() {
+        lastMismatchAOA = null; mmPanel.innerHTML = '';
+        tabMm.style.display = 'none'; mmDlBtn.style.display = 'none';
+        showTab('log');
+      }
+
+      // Render a mismatch AOA (from buildMismatchSheet) into the on-screen tab.
+      // Reveals the "Mismatches" tab + Download button but keeps the Log active
+      // so the run's progress stays visible; the user clicks the tab to view.
+      function renderMismatches(aoa, label) {
+        lastMismatchAOA = aoa; lastMismatchLabel = label || 'Mismatches';
+        if (!aoa || aoa.length < 2) { clearMismatches(); return; }
+        const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        const head = aoa[0], body = aoa.slice(1);
+        const diagCol = head.indexOf('Diagnosis');
+        let html = '<table><thead><tr>' + head.map(h => `<th>${esc(h)}</th>`).join('') + '</tr></thead><tbody>';
+        for (const row of body) {
+          const isNew = diagCol >= 0 && /^New/i.test(String(row[diagCol] || ''));
+          html += '<tr>' + row.map((c, i) => {
+            const cls = i === diagCol ? (isNew ? ' class="g-new"' : ' class="g-diff"') : '';
+            return `<td${cls}>${esc(c)}</td>`;
+          }).join('') + '</tr>';
+        }
+        html += '</tbody></table>';
+        mmPanel.innerHTML = html;
+        mmCount.textContent = String(body.length);
+        tabsBar.style.display = 'flex'; tabMm.style.display = 'inline-block'; mmDlBtn.style.display = 'inline-block';
+      }
+
+      // Download the currently-shown mismatch report as its own workbook.
+      mmDlBtn.addEventListener('click', () => {
+        if (!lastMismatchAOA || !window.XLSX) return;
+        const wbD = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(wbD, window.XLSX.utils.aoa_to_sheet(lastMismatchAOA), 'Mismatches');
+        const arrD = window.XLSX.write(wbD, { bookType: 'xlsx', type: 'array' });
+        const fname = `ContentHub_${String(lastMismatchLabel).replace(/[^a-z0-9]+/gi, '')}Mismatches_${ts()}.xlsx`;
+        downloadBlob(new Blob([arrD], { type: 'application/octet-stream' }), fname);
+      });
 
       function refreshStatus() {
         const parts = [];
@@ -701,21 +778,13 @@ export default function createExternalRoot(rootElement) {
             unmatchedRecords = allRecords.filter(r => !r.__matched);
             diagExpAoa = expAoa; diagKeyFields = strategies[0];
             if (unmatchedRecords.length) {
-              log(`ℹ ${unmatchedRecords.length} unmatched row(s) — a "Mismatches" tab detailing why will be ${dryRun ? 'downloaded as a diagnostics-only file' : 'added to the generated file'}.`, 'g-info');
+              // Show the mismatch detail on-screen in the "Mismatches" tab (with a
+              // Download button); it's also embedded in the generated import file.
+              renderMismatches(buildMismatchSheet(diagExpAoa, diagKeyFields, unmatchedRecords), item.label);
+              log(`ℹ ${unmatchedRecords.length} unmatched row(s) — see the "Mismatches" tab above (⬇ Download mismatches report to export).`, 'g-info');
             }
             if (!outputRecords.length) {
-              log('No rows matched the Content Hub export — nothing to update.', 'g-err');
-              // Still emit the diagnostics workbook (on BOTH Validate and Generate)
-              // so a 0-match run always explains why nothing matched.
-              if (unmatchedRecords.length) {
-                const mm = buildMismatchSheet(diagExpAoa, diagKeyFields, unmatchedRecords);
-                const wbOut = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wbOut, XLSX.utils.aoa_to_sheet(mm), 'Mismatches');
-                const arr = XLSX.write(wbOut, { bookType: 'xlsx', type: 'array' });
-                const fname = `ContentHub_${item.label.replace(/[^a-z0-9]+/gi, '')}Mismatches_${ts()}.xlsx`;
-                downloadBlob(new Blob([arr], { type: 'application/octet-stream' }), fname);
-                log(`✓ Downloaded ${fname} — ${unmatchedRecords.length} unmatched row(s) explained (0 matched, no import file).`, 'g-ok');
-              }
+              log('No rows matched the Content Hub export — nothing to update. (See the Mismatches tab for why.)', 'g-err');
               return;
             }
           }
@@ -807,21 +876,9 @@ export default function createExternalRoot(rootElement) {
             else log('All required fields present. ✓', 'g-ok');
           }
 
-          if (dryRun) {
-            // Validate makes no import file, but the Mismatches tab is purely
-            // diagnostic — so on a dry run with unmatched rows, download a
-            // diagnostics-only workbook containing just that tab.
-            if (updateMode && unmatchedRecords.length && diagExpAoa) {
-              const mm = buildMismatchSheet(diagExpAoa, diagKeyFields, unmatchedRecords);
-              const wbD = XLSX.utils.book_new();
-              XLSX.utils.book_append_sheet(wbD, XLSX.utils.aoa_to_sheet(mm), 'Mismatches');
-              const arrD = XLSX.write(wbD, { bookType: 'xlsx', type: 'array' });
-              const fnameD = `ContentHub_${item.label.replace(/[^a-z0-9]+/gi, '')}Mismatches_${ts()}.xlsx`;
-              downloadBlob(new Blob([arrD], { type: 'application/octet-stream' }), fnameD);
-              log(`✓ Downloaded ${fnameD} — ${unmatchedRecords.length} unmatched row(s) explained (no import file created).`, 'g-ok');
-            }
-            log('Dry run complete — review above, then Generate.', 'g-info'); return;
-          }
+          // (Mismatches are already shown on-screen in the tab above, from the
+          // matching step — nothing to download automatically on a dry run.)
+          if (dryRun) { log('Dry run complete — review above, then Generate.', 'g-info'); return; }
 
           const outCols = outColsOrder.filter(f => used.has(f));
           const outRows = [outCols];
