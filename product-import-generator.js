@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v2.4 · 2026-09-21';   // Mismatches tab now also downloads on Validate (dry run), not just Generate
+const BUILD_VERSION = 'v2.5 · 2026-09-21';   // Mismatches file now also emitted on the 0-match path (Validate + Generate)
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -705,14 +705,16 @@ export default function createExternalRoot(rootElement) {
             }
             if (!outputRecords.length) {
               log('No rows matched the Content Hub export — nothing to update.', 'g-err');
-              if (!dryRun && unmatchedRecords.length) {
+              // Still emit the diagnostics workbook (on BOTH Validate and Generate)
+              // so a 0-match run always explains why nothing matched.
+              if (unmatchedRecords.length) {
                 const mm = buildMismatchSheet(diagExpAoa, diagKeyFields, unmatchedRecords);
                 const wbOut = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wbOut, XLSX.utils.aoa_to_sheet(mm), 'Mismatches');
                 const arr = XLSX.write(wbOut, { bookType: 'xlsx', type: 'array' });
                 const fname = `ContentHub_${item.label.replace(/[^a-z0-9]+/gi, '')}Mismatches_${ts()}.xlsx`;
                 downloadBlob(new Blob([arr], { type: 'application/octet-stream' }), fname);
-                log(`✓ Generated ${fname} — ${unmatchedRecords.length} unmatched row(s) explained (no update rows).`, 'g-ok');
+                log(`✓ Downloaded ${fname} — ${unmatchedRecords.length} unmatched row(s) explained (0 matched, no import file).`, 'g-ok');
               }
               return;
             }
