@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v2.2 · 2026-09-17';   // Manufacturer default is an option-list dropdown (label shown, id stored)
+const BUILD_VERSION = 'v2.3 · 2026-09-21';   // + "Mismatches" tab explaining each unmatched row (which key value differed)
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -430,6 +430,79 @@ function buildExportIndex(aoa, strategies) {
   return { maps };
 }
 
+// Friendly short name for a CH field, used in the Mismatches tab headers.
+function shortField(f) {
+  if (f === 'TB.PCM.E1ItemNumber') return 'E1 Item #';
+  if (f === 'Color') return 'Color';
+  return String(f).split('.').pop();
+}
+
+// Build a "Mismatches" sheet (array-of-arrays) explaining why each unmatched
+// record didn't match: it locates the most likely Content Hub product (any
+// SHARED item number), then shows, side by side, which key value(s) differ —
+// e.g. the intake Color vs the Content Hub Color.
+function buildMismatchSheet(expAoa, keyFields, unmatched) {
+  const headers = expAoa[0].map(h => String(h == null ? '' : h).trim());
+  const low = headers.map(h => h.toLowerCase());
+  const colOf = name => low.indexOf(String(name).toLowerCase());
+  const idi = colOf('id'), idnt = colOf('identifier');
+  const e1Field = keyFields.find(f => /e1itemnumber/i.test(f));
+  const e1c = e1Field ? colOf(e1Field) : -1;
+
+  // Index every Content Hub row by each individual item-number token.
+  const rowsData = [];
+  const tokenIndex = new Map();
+  for (let i = 1; i < expAoa.length; i++) {
+    const row = expAoa[i];
+    if (!row || !row.some(c => String(c == null ? '' : c).trim() !== '')) continue;
+    const vals = {}; for (let j = 0; j < low.length; j++) vals[low[j]] = row[j];
+    const ri = rowsData.push({ vals, id: idi >= 0 ? row[idi] : '', identifier: idnt >= 0 ? row[idnt] : '' }) - 1;
+    if (e1c >= 0) {
+      String(row[e1c] == null ? '' : row[e1c]).split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+        .forEach(tok => { if (!tokenIndex.has(tok)) tokenIndex.set(tok, []); tokenIndex.get(tok).push(ri); });
+    }
+  }
+
+  const head = ['Intake Row', 'Diagnosis', 'Matched on item #'];
+  keyFields.forEach(f => { head.push('Intake ' + shortField(f)); head.push('Content Hub ' + shortField(f)); });
+  head.push('Content Hub id', 'Content Hub identifier');
+  const out = [head];
+
+  for (const r of unmatched) {
+    const intakeE1 = e1Field ? String(r[e1Field] == null ? '' : r[e1Field]) : '';
+    const toks = intakeE1.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+    const candSet = new Set(); let matchedTok = '';
+    for (const t of toks) { if (tokenIndex.has(t)) { if (!matchedTok) matchedTok = t; tokenIndex.get(t).forEach(ri => candSet.add(ri)); } }
+
+    let diagnosis, cand = null;
+    if (candSet.size === 0) {
+      diagnosis = 'New — no matching item # in Content Hub';
+    } else {
+      const cands = [...candSet].map(ri => rowsData[ri]);
+      const nonE1 = keyFields.filter(f => f !== e1Field);
+      // Prefer a candidate where every non-item key (e.g. Color) already matches.
+      cand = cands.find(c => nonE1.every(f => norm(String(r[f] == null ? '' : r[f])) === norm(String(c.vals[f.toLowerCase()] == null ? '' : c.vals[f.toLowerCase()])))) || cands[0];
+      const diffs = [];
+      for (const f of keyFields) {
+        const iv = String(r[f] == null ? '' : r[f]).trim();
+        const cv = String(cand.vals[f.toLowerCase()] == null ? '' : cand.vals[f.toLowerCase()]).trim();
+        if (norm(iv) !== norm(cv)) diffs.push(shortField(f));
+      }
+      diagnosis = diffs.length ? (diffs.join(' & ') + (diffs.length > 1 ? ' differ' : ' differs')) : 'same item shared but full item-number set differs';
+      if (cands.length > 1) diagnosis += ` · ${cands.length} CH candidates`;
+    }
+
+    const rowOut = [r.__row, diagnosis, matchedTok || ''];
+    for (const f of keyFields) {
+      rowOut.push(String(r[f] == null ? '' : r[f]));
+      rowOut.push(cand ? String(cand.vals[f.toLowerCase()] == null ? '' : cand.vals[f.toLowerCase()]) : '');
+    }
+    rowOut.push(cand ? String(cand.id == null ? '' : cand.id) : '', cand ? String(cand.identifier == null ? '' : cand.identifier) : '');
+    out.push(rowOut);
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 export default function createExternalRoot(rootElement) {
   return {
@@ -601,6 +674,7 @@ export default function createExternalRoot(rootElement) {
           if (wantUpdate && !groupSupportsUpdate) log('This category is create-only — the Content Hub export is ignored.', 'g-skip');
           else if (wantUpdate && strategies0.length === 0) log('This category updates by id/identifier already in your file — the Content Hub export is not used for matching.', 'g-skip');
           let outputRecords = allRecords;
+          let diagExpAoa = null, diagKeyFields = null, unmatchedRecords = [];
           if (updateMode) {
             const strategies = parts[0].matchStrategies;
             const expWb = XLSX.read(await currentExport.arrayBuffer(), { type: 'array' });
@@ -624,7 +698,24 @@ export default function createExternalRoot(rootElement) {
             log(`Matched ${matched} of ${allRecords.length} row(s).`, matched ? 'g-ok' : 'g-err');
             if (unmatched.length) log(`Unmatched (skipped): row ${unmatched.join(', ')}`, 'g-err');
             outputRecords = allRecords.filter(r => r.__matched);
-            if (!outputRecords.length) { log('Nothing to update.', 'g-err'); return; }
+            unmatchedRecords = allRecords.filter(r => !r.__matched);
+            diagExpAoa = expAoa; diagKeyFields = strategies[0];
+            if (unmatchedRecords.length) {
+              log(`ℹ ${unmatchedRecords.length} unmatched row(s) — a "Mismatches" tab detailing why will be added to the generated file${dryRun ? ' (run Generate to get it)' : ''}.`, 'g-info');
+            }
+            if (!outputRecords.length) {
+              log('No rows matched the Content Hub export — nothing to update.', 'g-err');
+              if (!dryRun && unmatchedRecords.length) {
+                const mm = buildMismatchSheet(diagExpAoa, diagKeyFields, unmatchedRecords);
+                const wbOut = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wbOut, XLSX.utils.aoa_to_sheet(mm), 'Mismatches');
+                const arr = XLSX.write(wbOut, { bookType: 'xlsx', type: 'array' });
+                const fname = `ContentHub_${item.label.replace(/[^a-z0-9]+/gi, '')}Mismatches_${ts()}.xlsx`;
+                downloadBlob(new Blob([arr], { type: 'application/octet-stream' }), fname);
+                log(`✓ Generated ${fname} — ${unmatchedRecords.length} unmatched row(s) explained (no update rows).`, 'g-ok');
+              }
+              return;
+            }
           }
 
           // NEW records only: per-record fallbacks for ProductName/SKU, and a
@@ -722,11 +813,17 @@ export default function createExternalRoot(rootElement) {
           const ws = XLSX.utils.aoa_to_sheet(outRows);
           const wbOut = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wbOut, ws, SHEET_NAME);
+          // Second tab: details for every unmatched row (what value(s) differed).
+          if (updateMode && unmatchedRecords.length && diagExpAoa) {
+            const mm = buildMismatchSheet(diagExpAoa, diagKeyFields, unmatchedRecords);
+            XLSX.utils.book_append_sheet(wbOut, XLSX.utils.aoa_to_sheet(mm), 'Mismatches');
+            log(`Added "Mismatches" tab — ${unmatchedRecords.length} unmatched row(s) explained.`, 'g-info');
+          }
           const arr = XLSX.write(wbOut, { bookType: 'xlsx', type: 'array' });
           const tag = item.label.replace(/[^a-z0-9]+/gi, '');
           const fname = `ContentHub_${tag}Import_${ts()}.xlsx`;
           downloadBlob(new Blob([arr], { type: 'application/octet-stream' }), fname);
-          log(`✓ Generated ${fname} — ${outputRecords.length} ${updateMode ? 'update' : 'new'} row(s).`, 'g-ok');
+          log(`✓ Generated ${fname} — ${outputRecords.length} ${updateMode ? 'update' : 'new'} row(s)${updateMode && unmatchedRecords.length ? ` · ${unmatchedRecords.length} in Mismatches tab` : ''}.`, 'g-ok');
         } catch (e) {
           log(`✗ ${e && e.message ? e.message : e}`, 'g-err');
         } finally { dryBtn.disabled = false; goBtn.disabled = false; }
