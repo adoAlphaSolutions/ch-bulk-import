@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v2.6 · 2026-09-21';   // Mismatches shown as an on-screen tab + "Download report" button (also embedded in Generate)
+const BUILD_VERSION = 'v2.7 · 2026-09-21';   // accept "MFN SKU" (and vendor/mfr SKU) as TB.PCM.Product.SKU across categories
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -58,6 +58,10 @@ const GLOBAL_REQUIRED = ['TB.PCM.Product.Manufacturer', 'TB.PCM.ProductName', 'C
 // Alternate intake header spellings that all mean the plain "Color" column.
 // Normalized (lowercase, single-spaced) — e.g. header "Finish/Color" -> "finish/color".
 const COLOR_ALIASES = ['finish/color', 'finish / color', 'color/finish', 'color / finish', 'colour', 'color/finish name'];
+
+// Alternate intake header spellings that all mean TB.PCM.Product.SKU. Many
+// vendor intakes label the SKU column "MFN SKU" (manufacturer SKU).
+const SKU_ALIASES = ['mfn sku', 'mfr sku', 'manufacturer sku', 'vendor sku', 'vendor sku (if available)'];
 
 const ID_LABELS = { 'id': 'id', 'content hub id': 'id', 'identifier': 'identifier', 'content hub identifier': 'identifier' };
 
@@ -406,6 +410,11 @@ function buildRecord(cfg, rowObj) {
   if (!String(rec['Color'] == null ? '' : rec['Color']).trim()) {
     for (const a of COLOR_ALIASES) { const v = (rowObj[a] || '').trim(); if (v) { rec['Color'] = v; break; } }
   }
+  // Likewise for the SKU: accept "MFN SKU" and similar aliases if the config's
+  // own SKU header didn't populate TB.PCM.Product.SKU.
+  if (!String(rec['TB.PCM.Product.SKU'] == null ? '' : rec['TB.PCM.Product.SKU']).trim()) {
+    for (const a of SKU_ALIASES) { const v = (rowObj[a] || '').trim(); if (v) { rec['TB.PCM.Product.SKU'] = v; break; } }
+  }
   if (cfg.fallbacks) {
     if (cfg.fallbacks.nameFrom) {
       let n = ''; for (const l of cfg.fallbacks.nameFrom) { const v = (rowObj[l] || '').trim(); if (v) { n = v; break; } }
@@ -720,6 +729,7 @@ export default function createExternalRoot(rootElement) {
             const normHeaders = rawHeaders.map(norm);
             const known = new Set([...Object.keys(part.fieldMap), ...Object.keys(ID_LABELS)]);
             COLOR_ALIASES.forEach(a => known.add(a));
+            SKU_ALIASES.forEach(a => known.add(a));
             if (part.itemCols) part.itemCols.forEach(i => known.add(i.label));
             if (part.specialFeatures) part.specialFeatures.flags.forEach(f => known.add(f.label));
             if (part.fallbacks && part.fallbacks.nameFrom) part.fallbacks.nameFrom.forEach(l => known.add(l));
