@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v2.7 · 2026-09-21';   // accept "MFN SKU" (and vendor/mfr SKU) as TB.PCM.Product.SKU across categories
+const BUILD_VERSION = 'v2.8 · 2026-09-21';   // warn clearly when expected columns (item #/Color/SKU/Name) are missing or misnamed
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -582,7 +582,7 @@ export default function createExternalRoot(rootElement) {
       const defMfr = wrap.querySelector('#g-def-mfr'), defName = wrap.querySelector('#g-def-name'), defColor = wrap.querySelector('#g-def-color');
       const tabsBar = wrap.querySelector('#g-tabs'), tabLog = wrap.querySelector('#g-tab-log'), tabMm = wrap.querySelector('#g-tab-mm');
       const mmPanel = wrap.querySelector('#g-mm'), mmCount = wrap.querySelector('#g-mm-count'), mmDlBtn = wrap.querySelector('#g-mm-dl');
-      let currentFile = null, currentExport = null, lastMismatchAOA = null, lastMismatchLabel = '';
+      let currentFile = null, currentExport = null, lastMismatchAOA = null, lastMismatchLabel = '', lastMismatchNotes = [];
 
       catSel.innerHTML = DROPDOWN.map(d => `<option value="${d.key}">${d.label}</option>`).join('');
       function partsForSelection() { const item = DROPDOWN.find(d => d.key === catSel.value) || DROPDOWN[0]; return { item, parts: item.group.map(k => CATEGORY_CONFIGS[k]) }; }
@@ -640,7 +640,7 @@ export default function createExternalRoot(rootElement) {
       tabMm.addEventListener('click', () => showTab('mm'));
 
       function clearMismatches() {
-        lastMismatchAOA = null; mmPanel.innerHTML = '';
+        lastMismatchAOA = null; lastMismatchNotes = []; mmPanel.innerHTML = '';
         tabMm.style.display = 'none'; mmDlBtn.style.display = 'none';
         showTab('log');
       }
@@ -648,13 +648,21 @@ export default function createExternalRoot(rootElement) {
       // Render a mismatch AOA (from buildMismatchSheet) into the on-screen tab.
       // Reveals the "Mismatches" tab + Download button but keeps the Log active
       // so the run's progress stays visible; the user clicks the tab to view.
-      function renderMismatches(aoa, label) {
-        lastMismatchAOA = aoa; lastMismatchLabel = label || 'Mismatches';
-        if (!aoa || aoa.length < 2) { clearMismatches(); return; }
+      // `notes` are "expected column not found" warnings shown as a banner.
+      function renderMismatches(aoa, label, notes) {
+        lastMismatchAOA = aoa; lastMismatchLabel = label || 'Mismatches'; lastMismatchNotes = notes || [];
+        if ((!aoa || aoa.length < 2) && !(notes && notes.length)) { clearMismatches(); return; }
         const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        let html = '';
+        if (notes && notes.length) {
+          html += '<div style="background:#fff5f5;border:1px solid #fc8181;color:#822727;padding:8px 12px;font-size:12px;">'
+                + '<b>Column name issues:</b><ul style="margin:6px 0 0 18px;padding:0">'
+                + notes.map(nn => `<li>${esc(nn)}</li>`).join('') + '</ul></div>';
+        }
+        if (!aoa || aoa.length < 2) { mmPanel.innerHTML = html; mmCount.textContent = '0'; tabsBar.style.display = 'flex'; tabMm.style.display = 'inline-block'; mmDlBtn.style.display = 'inline-block'; return; }
         const head = aoa[0], body = aoa.slice(1);
         const diagCol = head.indexOf('Diagnosis');
-        let html = '<table><thead><tr>' + head.map(h => `<th>${esc(h)}</th>`).join('') + '</tr></thead><tbody>';
+        html += '<table><thead><tr>' + head.map(h => `<th>${esc(h)}</th>`).join('') + '</tr></thead><tbody>';
         for (const row of body) {
           const isNew = diagCol >= 0 && /^New/i.test(String(row[diagCol] || ''));
           html += '<tr>' + row.map((c, i) => {
@@ -668,11 +676,14 @@ export default function createExternalRoot(rootElement) {
         tabsBar.style.display = 'flex'; tabMm.style.display = 'inline-block'; mmDlBtn.style.display = 'inline-block';
       }
 
-      // Download the currently-shown mismatch report as its own workbook.
+      // Download the currently-shown mismatch report as its own workbook
+      // (includes a "Notes" tab with any column-name warnings).
       mmDlBtn.addEventListener('click', () => {
-        if (!lastMismatchAOA || !window.XLSX) return;
+        if ((!lastMismatchAOA || !lastMismatchAOA.length) && !lastMismatchNotes.length) return;
+        if (!window.XLSX) return;
         const wbD = window.XLSX.utils.book_new();
-        window.XLSX.utils.book_append_sheet(wbD, window.XLSX.utils.aoa_to_sheet(lastMismatchAOA), 'Mismatches');
+        if (lastMismatchNotes.length) window.XLSX.utils.book_append_sheet(wbD, window.XLSX.utils.aoa_to_sheet([['Column name issues'], ...lastMismatchNotes.map(nn => [nn])]), 'Notes');
+        if (lastMismatchAOA && lastMismatchAOA.length) window.XLSX.utils.book_append_sheet(wbD, window.XLSX.utils.aoa_to_sheet(lastMismatchAOA), 'Mismatches');
         const arrD = window.XLSX.write(wbD, { bookType: 'xlsx', type: 'array' });
         const fname = `ContentHub_${String(lastMismatchLabel).replace(/[^a-z0-9]+/gi, '')}Mismatches_${ts()}.xlsx`;
         downloadBlob(new Blob([arrD], { type: 'application/octet-stream' }), fname);
@@ -713,6 +724,7 @@ export default function createExternalRoot(rootElement) {
           const optionFields = new Set();
           const outColsOrder = [];
           const usedSheets = new Set();
+          const headerWarnings = [];   // "expected column not found" notes for the log + report
 
           for (const part of parts) {
             // Pick this part's sheet (by keyword match; single categories use the first sheet).
@@ -747,6 +759,49 @@ export default function createExternalRoot(rootElement) {
             const skipped = rawHeaders.filter((h, i) => h && !known.has(normHeaders[i]));
             log(`Sheet "${name}" → ${part.categoryValue ? part.categoryValue.split('.').pop() : ''}: ${n} row(s).`, 'g-info');
             if (skipped.length) log(`  skipped: ${skipped.join(', ')}`, 'g-skip');
+
+            // ---- Expected-column check: warn (clearly) when a column the match
+            // key / required fields need is missing or present under an
+            // unrecognized name, so a bad header isn't a silent failure. ----
+            const hasHdr = label => normHeaders.includes(norm(label));
+            // 1) Item-number columns (the match key). If some are missing AND a
+            //    skipped header looks like an item # column, the header name is wrong.
+            if (part.itemCols && part.itemCols.length) {
+              const expected = part.itemCols.map(i => i.label);
+              const foundItems = expected.filter(hasHdr);
+              const skippedItemish = skipped.filter(h => /item\s*#/i.test(h));
+              if (skippedItemish.length && foundItems.length < expected.length) {
+                const w = `Intake "${name}": unrecognized item-number column(s) — ${skippedItemish.join(', ')}. Expected header name(s): ${expected.join(', ')}. Their values are NOT used in the match key.`;
+                log('⚠ ' + w, 'g-err'); headerWarnings.push(w);
+              } else if (!foundItems.length) {
+                const w = `Intake "${name}": none of the expected item-number columns were found (${expected.join(', ')}).`;
+                log('⚠ ' + w, 'g-err'); headerWarnings.push(w);
+              }
+            }
+            // 2) Color (match key + required for most categories).
+            const colorPresent = hasHdr('color') || COLOR_ALIASES.some(a => normHeaders.includes(a));
+            if (!colorPresent && (part.requiredFields || []).includes('Color')) {
+              const w = `Intake "${name}": no "Color" column found (needed for matching).`;
+              log('⚠ ' + w, 'g-err'); headerWarnings.push(w);
+            }
+            // 3) SKU (required for Tile/Countertops/Flooring).
+            if ((part.requiredFields || []).includes('TB.PCM.Product.SKU')) {
+              const skuLabels = Object.keys(part.fieldMap).filter(k => part.fieldMap[k] === 'TB.PCM.Product.SKU').concat(SKU_ALIASES);
+              if (!skuLabels.some(hasHdr)) {
+                const w = `Intake "${name}": no SKU column found (accepts SKU / MFN SKU / Vendor SKU).`;
+                log('⚠ ' + w, 'g-err'); headerWarnings.push(w);
+              }
+            }
+            // 4) Product Name (required; may fall back to Description).
+            if ((part.requiredFields || []).includes('TB.PCM.ProductName')) {
+              const nameLabels = Object.keys(part.fieldMap).filter(k => part.fieldMap[k] === 'TB.PCM.ProductName');
+              if (!nameLabels.some(hasHdr)) {
+                const hasFallback = part.fallbacks && part.fallbacks.nameFrom && part.fallbacks.nameFrom.some(hasHdr);
+                const w = `Intake "${name}": no "Product Name" column found${hasFallback ? ' — will fall back to Description' : ''}.`;
+                log((hasFallback ? 'ℹ ' : '⚠ ') + w, hasFallback ? 'g-skip' : 'g-err'); headerWarnings.push(w);
+              }
+            }
+
             part.optionListFields.forEach(f => optionFields.add(f));
             part.outCols.forEach(c => { if (!outColsOrder.includes(c)) outColsOrder.push(c); });
           }
@@ -790,7 +845,7 @@ export default function createExternalRoot(rootElement) {
             if (unmatchedRecords.length) {
               // Show the mismatch detail on-screen in the "Mismatches" tab (with a
               // Download button); it's also embedded in the generated import file.
-              renderMismatches(buildMismatchSheet(diagExpAoa, diagKeyFields, unmatchedRecords), item.label);
+              renderMismatches(buildMismatchSheet(diagExpAoa, diagKeyFields, unmatchedRecords), item.label, headerWarnings);
               log(`ℹ ${unmatchedRecords.length} unmatched row(s) — see the "Mismatches" tab above (⬇ Download mismatches report to export).`, 'g-info');
             }
             if (!outputRecords.length) {
@@ -896,6 +951,10 @@ export default function createExternalRoot(rootElement) {
           const ws = XLSX.utils.aoa_to_sheet(outRows);
           const wbOut = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wbOut, ws, SHEET_NAME);
+          // Notes tab: column-name warnings (expected columns not found).
+          if (headerWarnings.length) {
+            XLSX.utils.book_append_sheet(wbOut, XLSX.utils.aoa_to_sheet([['Column name issues'], ...headerWarnings.map(nn => [nn])]), 'Notes');
+          }
           // Second tab: details for every unmatched row (what value(s) differed).
           if (updateMode && unmatchedRecords.length && diagExpAoa) {
             const mm = buildMismatchSheet(diagExpAoa, diagKeyFields, unmatchedRecords);
