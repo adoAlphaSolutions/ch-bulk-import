@@ -1,4 +1,4 @@
-const BUILD_VERSION = 'v2.3 · 2026-09-21';   // + "Mismatches" tab explaining each unmatched row (which key value differed)
+const BUILD_VERSION = 'v2.4 · 2026-09-21';   // Mismatches tab now also downloads on Validate (dry run), not just Generate
 // ============================================================================
 // Toll Product Import Generator — Content Hub External Component (multi-category)
 // ----------------------------------------------------------------------------
@@ -701,7 +701,7 @@ export default function createExternalRoot(rootElement) {
             unmatchedRecords = allRecords.filter(r => !r.__matched);
             diagExpAoa = expAoa; diagKeyFields = strategies[0];
             if (unmatchedRecords.length) {
-              log(`ℹ ${unmatchedRecords.length} unmatched row(s) — a "Mismatches" tab detailing why will be added to the generated file${dryRun ? ' (run Generate to get it)' : ''}.`, 'g-info');
+              log(`ℹ ${unmatchedRecords.length} unmatched row(s) — a "Mismatches" tab detailing why will be ${dryRun ? 'downloaded as a diagnostics-only file' : 'added to the generated file'}.`, 'g-info');
             }
             if (!outputRecords.length) {
               log('No rows matched the Content Hub export — nothing to update.', 'g-err');
@@ -805,7 +805,21 @@ export default function createExternalRoot(rootElement) {
             else log('All required fields present. ✓', 'g-ok');
           }
 
-          if (dryRun) { log('Dry run complete — review above, then Generate.', 'g-info'); return; }
+          if (dryRun) {
+            // Validate makes no import file, but the Mismatches tab is purely
+            // diagnostic — so on a dry run with unmatched rows, download a
+            // diagnostics-only workbook containing just that tab.
+            if (updateMode && unmatchedRecords.length && diagExpAoa) {
+              const mm = buildMismatchSheet(diagExpAoa, diagKeyFields, unmatchedRecords);
+              const wbD = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wbD, XLSX.utils.aoa_to_sheet(mm), 'Mismatches');
+              const arrD = XLSX.write(wbD, { bookType: 'xlsx', type: 'array' });
+              const fnameD = `ContentHub_${item.label.replace(/[^a-z0-9]+/gi, '')}Mismatches_${ts()}.xlsx`;
+              downloadBlob(new Blob([arrD], { type: 'application/octet-stream' }), fnameD);
+              log(`✓ Downloaded ${fnameD} — ${unmatchedRecords.length} unmatched row(s) explained (no import file created).`, 'g-ok');
+            }
+            log('Dry run complete — review above, then Generate.', 'g-info'); return;
+          }
 
           const outCols = outColsOrder.filter(f => used.has(f));
           const outRows = [outCols];
